@@ -58,6 +58,7 @@ fun AppDrawerScreen(
     viewModel: AppDrawerViewModel,
     onAppClick: (packageName: String, activityName: String) -> Unit,
     onAddToHomeScreen: (AppInfo) -> Unit,
+    onStartPlaceApp: (AppInfo) -> Unit = onAddToHomeScreen,
     onAppInfo: (packageName: String) -> Unit,
     onUninstall: (packageName: String) -> Unit,
     onClose: () -> Unit,
@@ -68,10 +69,19 @@ fun AppDrawerScreen(
     val gridState = rememberLazyGridState()
     val coroutineScope = rememberCoroutineScope()
     var isVaultOpen by remember { mutableStateOf(false) }
+    var selectedCategory by remember { mutableStateOf(com.aos.core.domain.model.AppCategory.All) }
+
+    val displayedApps = remember(uiState.filteredApps, selectedCategory) {
+        if (selectedCategory == com.aos.core.domain.model.AppCategory.All) {
+            uiState.filteredApps
+        } else {
+            uiState.filteredApps.filter { it.category == selectedCategory }
+        }
+    }
 
     // Distinct alphabet letters present in apps
-    val alphabet = remember(uiState.filteredApps) {
-        uiState.filteredApps
+    val alphabet = remember(displayedApps) {
+        displayedApps
             .mapNotNull { it.label.firstOrNull()?.uppercaseChar() }
             .distinct()
             .sorted()
@@ -149,6 +159,14 @@ fun AppDrawerScreen(
                 }
             }
 
+            // Universal Smart Search Results (Math, Contacts, Web & AI Chips)
+            com.aos.feature.appdrawer.components.SmartSearchResults(
+                searchQuery = uiState.searchQuery,
+                mathResult = uiState.mathResult,
+                contactResults = uiState.contactResults,
+                aiChipsEnabled = uiState.aiSearchChipsEnabled
+            )
+
             // AI Suggested Apps Shelf
             if (uiState.suggestedApps.isNotEmpty() && uiState.searchQuery.isBlank()) {
                 Spacer(modifier = Modifier.height(8.dp))
@@ -159,7 +177,14 @@ fun AppDrawerScreen(
                 Spacer(modifier = Modifier.height(4.dp))
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            // Smart Category Filter Bar (visible when not searching)
+            if (uiState.searchQuery.isBlank()) {
+                com.aos.feature.appdrawer.components.CategoryFilterBar(
+                    selectedCategory = selectedCategory,
+                    onSelectCategory = { selectedCategory = it }
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+            }
 
             // Main Apps Grid with Side Alphabet Bar
             if (uiState.isLoading) {
@@ -177,29 +202,16 @@ fun AppDrawerScreen(
                         modifier = Modifier.weight(1f)
                     ) {
                         itemsIndexed(
-                            items = uiState.filteredApps,
+                            items = displayedApps,
                             key = { _, app -> app.packageName + app.activityName }
                         ) { _, app ->
-                            var isContextMenuVisible by remember { mutableStateOf(false) }
-
-                            Box(contentAlignment = Alignment.Center) {
-                                AosAppIcon(
-                                    label = app.label,
-                                    packageName = app.packageName,
-                                    activityName = app.activityName,
-                                    onClick = { onAppClick(app.packageName, app.activityName) },
-                                    onLongClick = { isContextMenuVisible = true }
-                                )
-
-                                AppDrawerContextMenu(
-                                    expanded = isContextMenuVisible,
-                                    onDismissRequest = { isContextMenuVisible = false },
-                                    onAddToHomeScreen = { onAddToHomeScreen(app) },
-                                    onAppInfo = { onAppInfo(app.packageName) },
-                                    onHideApp = { viewModel.hideApp(app.packageName) },
-                                    onUninstall = { onUninstall(app.packageName) }
-                                )
-                            }
+                            AosAppIcon(
+                                label = app.label,
+                                packageName = app.packageName,
+                                activityName = app.activityName,
+                                onClick = { onAppClick(app.packageName, app.activityName) },
+                                onLongClick = { onStartPlaceApp(app) }
+                            )
                         }
                     }
 

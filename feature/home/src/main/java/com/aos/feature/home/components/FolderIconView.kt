@@ -30,13 +30,19 @@ import com.aos.core.ui.theme.SquircleShape
 fun FolderIconView(
     folder: LauncherItem.FolderItem,
     showLabel: Boolean = true,
-    onClick: () -> Unit,
+    onClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
+    val clickableModifier = if (onClick != null) {
+        Modifier.clickable(onClick = onClick)
+    } else {
+        Modifier
+    }
+
     Column(
         modifier = modifier
             .width(72.dp)
-            .clickable(onClick = onClick),
+            .then(clickableModifier),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {

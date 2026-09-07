@@ -1,15 +1,23 @@
 package com.aos.feature.appdrawer
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.aos.core.common.result.Result
+import com.aos.core.common.util.MathEvaluator
 import com.aos.core.domain.model.AppInfo
 import com.aos.core.domain.model.Profile
 import com.aos.core.domain.repository.AiSuggestionRepository
 import com.aos.core.domain.repository.AppListRepository
+import com.aos.core.domain.repository.ContactSearchRepository
 import com.aos.core.domain.repository.HiddenAppsRepository
 import com.aos.core.domain.repository.ProfileRepository
+import com.aos.core.domain.repository.UserPreferencesRepository
+import com.aos.core.ui.components.AppIconCache
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -20,18 +28,38 @@ import javax.inject.Inject
 
 @HiltViewModel
 class AppDrawerViewModel @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val appListRepository: AppListRepository,
     private val profileRepository: ProfileRepository,
     private val aiSuggestionRepository: AiSuggestionRepository,
-    private val hiddenAppsRepository: HiddenAppsRepository
+    private val hiddenAppsRepository: HiddenAppsRepository,
+    private val contactSearchRepository: ContactSearchRepository,
+    private val userPreferencesRepository: UserPreferencesRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AppDrawerUiState(isLoading = true))
     val uiState: StateFlow<AppDrawerUiState> = _uiState.asStateFlow()
 
+    private var searchJob: Job? = null
+
     init {
         loadAppsAndProfile()
         loadAiSuggestions()
+        loadPreferences()
+    }
+
+    private fun loadPreferences() {
+        viewModelScope.launch {
+            userPreferencesRepository.userPreferences.collect { prefs ->
+                _uiState.update { current ->
+                    current.copy(
+                        mathCalculatorEnabled = prefs.themeConfig.enableMathCalculator,
+                        contactsSearchEnabled = prefs.themeConfig.enableContactsSearch,
+                        aiSearchChipsEnabled = prefs.themeConfig.enableAiSearchChips
+                    )
+                }
+            }
+        }
     }
 
     private fun loadAppsAndProfile() {
@@ -61,6 +89,13 @@ class AppDrawerViewModel @Inject constructor(
                                 isLoading = false
                             )
                         }
+
+                        // Warm up icon cache in background to ensure zero stutter while scrolling
+                        viewModelScope.launch(Dispatchers.IO) {
+                            baseApps.forEach { app ->
+                                AppIconCache.preload(context, app.packageName)
+                            }
+                        }
                     }
                     is Result.Error -> _uiState.update {
                         it.copy(isLoading = false, errorMessage = appsResult.message)
@@ -87,11 +122,28 @@ class AppDrawerViewModel @Inject constructor(
     }
 
     fun onSearchQueryChanged(query: String) {
+        val math = if (_uiState.value.mathCalculatorEnabled) MathEvaluator.evaluate(query) else null
+
         _uiState.update { current ->
             current.copy(
                 searchQuery = query,
-                filteredApps = filterByQuery(current.apps, query)
+                filteredApps = filterByQuery(current.apps, query),
+                mathResult = math
             )
+        }
+
+        searchJob?.cancel()
+        if (_uiState.value.contactsSearchEnabled && query.trim().length >= 2) {
+            searchJob = viewModelScope.launch {
+                val contacts = contactSearchRepository.searchContacts(query.trim(), maxResults = 5)
+                _uiState.update { current ->
+                    if (current.searchQuery == query) {
+                        current.copy(contactResults = contacts)
+                    } else current
+                }
+            }
+        } else {
+            _uiState.update { it.copy(contactResults = emptyList()) }
         }
     }
 

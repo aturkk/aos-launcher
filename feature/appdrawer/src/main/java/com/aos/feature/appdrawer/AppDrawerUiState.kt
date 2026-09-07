@@ -2,6 +2,7 @@ package com.aos.feature.appdrawer
 
 import com.aos.core.domain.model.AppInfo
 import com.aos.core.domain.model.AppSuggestion
+import com.aos.core.domain.model.DeviceContact
 import com.aos.core.domain.model.Profile
 
 data class AppDrawerUiState(
@@ -14,5 +15,10 @@ data class AppDrawerUiState(
     val errorMessage: String? = null,
     val hiddenApps: List<AppInfo> = emptyList(),
     val isVaultUnlocked: Boolean = false,
-    val isVaultPinSet: Boolean = false
+    val isVaultPinSet: Boolean = false,
+    val mathResult: String? = null,
+    val contactResults: List<DeviceContact> = emptyList(),
+    val mathCalculatorEnabled: Boolean = true,
+    val contactsSearchEnabled: Boolean = true,
+    val aiSearchChipsEnabled: Boolean = true
 )

@@ -8,5 +8,6 @@ data class AppInfo(
     val activityName: String,
     val label: String,
     val installTime: Long = 0L,
-    val isSystemApp: Boolean = false
+    val isSystemApp: Boolean = false,
+    val category: AppCategory = AppCategory.Other
 )

@@ -24,6 +24,7 @@ import javax.inject.Singleton
 @Singleton
 class AppListRepositoryImpl @Inject constructor(
     @ApplicationContext private val context: Context,
+    private val appCategorizer: com.aos.core.data.category.AppCategorizer,
     @Dispatcher(AosDispatchers.IO) private val ioDispatcher: CoroutineDispatcher
 ) : AppListRepository {
 
@@ -47,16 +48,24 @@ class AppListRepositoryImpl @Inject constructor(
             addCategory(Intent.CATEGORY_LAUNCHER)
         }
 
-        pm.queryIntentActivities(intent, 0)
-            .mapNotNull { resolveInfo ->
-                val activityInfo = resolveInfo.activityInfo ?: return@mapNotNull null
-                AppInfo(
-                    packageName = activityInfo.packageName,
-                    activityName = activityInfo.name,
-                    label = resolveInfo.loadLabel(pm).toString(),
-                    isSystemApp = (activityInfo.applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_SYSTEM) != 0
-                )
-            }
-            .sortedBy { it.label.lowercase() }
+        val activities = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            pm.queryIntentActivities(intent, android.content.pm.PackageManager.ResolveInfoFlags.of(0L))
+        } else {
+            @Suppress("DEPRECATION")
+            pm.queryIntentActivities(intent, 0)
+        }
+
+        activities.mapNotNull { resolveInfo ->
+            val activityInfo = resolveInfo.activityInfo ?: return@mapNotNull null
+            val label = resolveInfo.loadLabel(pm).toString()
+            val category = appCategorizer.categorize(activityInfo.packageName, label)
+            AppInfo(
+                packageName = activityInfo.packageName,
+                activityName = activityInfo.name,
+                label = label,
+                isSystemApp = (activityInfo.applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_SYSTEM) != 0,
+                category = category
+            )
+        }.sortedBy { it.label.lowercase() }
     }
 }

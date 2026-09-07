@@ -32,6 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aos.core.common.util.LauncherSystemActions
+import com.aos.core.domain.model.AppInfo
 import com.aos.core.domain.model.AssistantResult
 import com.aos.core.domain.model.CommandType
 import com.aos.core.domain.model.DarkModeOption
@@ -170,6 +171,7 @@ class LauncherActivity : ComponentActivity() {
                 } else {
                     var isAppDrawerOpen by remember { mutableStateOf(false) }
                     var isSettingsOpen by remember { mutableStateOf(false) }
+                    var pendingPlacedApp by remember { mutableStateOf<AppInfo?>(null) }
 
                     val appDrawerViewModel: AppDrawerViewModel = hiltViewModel()
                     val settingsViewModel: SettingsViewModel = hiltViewModel()
@@ -179,6 +181,7 @@ class LauncherActivity : ComponentActivity() {
                         when {
                             isSettingsOpen -> isSettingsOpen = false
                             isAppDrawerOpen -> isAppDrawerOpen = false
+                            pendingPlacedApp != null -> pendingPlacedApp = null
                             else -> {
                                 // Already on home screen, do nothing
                             }
@@ -190,6 +193,8 @@ class LauncherActivity : ComponentActivity() {
                     HomeScreen(
                         viewModel = homeViewModel,
                         notificationCounts = notificationCounts,
+                        pendingPlacedApp = pendingPlacedApp,
+                        onClearPendingPlacedApp = { pendingPlacedApp = null },
                         onOpenAppDrawer = { isAppDrawerOpen = true },
                         onOpenNotifications = {
                             LauncherSystemActions.expandNotificationShade(this@LauncherActivity)
@@ -201,11 +206,7 @@ class LauncherActivity : ComponentActivity() {
                         onAddWidget = { startPickWidget() },
                         widgetHost = widgetHost,
                         onOpenSearch = { engine ->
-                            val queryUrl = when (engine) {
-                                SearchEngineOption.Google -> "https://www.google.com"
-                                SearchEngineOption.DuckDuckGo -> "https://duckduckgo.com"
-                                SearchEngineOption.Bing -> "https://www.bing.com"
-                            }
+                            val queryUrl = engine.buildSearchUrl("")
                             try {
                                 val intent = Intent(Intent.ACTION_VIEW, Uri.parse(queryUrl))
                                 startActivity(intent)
@@ -233,13 +234,9 @@ class LauncherActivity : ComponentActivity() {
                                 }
                                 CommandType.Search -> {
                                     val engine = homeUiState.userPreferences.themeConfig.searchEngine
-                                    val baseUrl = when (engine) {
-                                        SearchEngineOption.Google -> "https://www.google.com/search?q="
-                                        SearchEngineOption.DuckDuckGo -> "https://duckduckgo.com/?q="
-                                        SearchEngineOption.Bing -> "https://www.bing.com/search?q="
-                                    }
+                                    val searchUrl = engine.buildSearchUrl(result.payload)
                                     try {
-                                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(baseUrl + Uri.encode(result.payload)))
+                                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(searchUrl))
                                         startActivity(intent)
                                     } catch (e: Exception) {
                                         Toast.makeText(this@LauncherActivity, "Tarayıcı açılamadı", Toast.LENGTH_SHORT).show()
@@ -286,9 +283,13 @@ class LauncherActivity : ComponentActivity() {
                                     launchApplication(pkg, activity)
                                 }
                             },
+                            onStartPlaceApp = { app ->
+                                isAppDrawerOpen = false
+                                pendingPlacedApp = app
+                            },
                             onAddToHomeScreen = { app ->
-                                homeViewModel.findFirstEmptyCellAndAddApp(app)
-                                Toast.makeText(this@LauncherActivity, "${app.label} ana ekrana eklendi", Toast.LENGTH_SHORT).show()
+                                isAppDrawerOpen = false
+                                pendingPlacedApp = app
                             },
                             onAppInfo = { pkg -> openAppInfo(pkg) },
                             onUninstall = { pkg -> uninstallApp(pkg) },

@@ -58,6 +58,22 @@ class UserPreferencesRepositoryImpl @Inject constructor(
         dataStore.setSearchEngine(engine)
     }
 
+    override suspend fun setMathCalculatorEnabled(enabled: Boolean) {
+        dataStore.setMathCalculatorEnabled(enabled)
+    }
+
+    override suspend fun setContactsSearchEnabled(enabled: Boolean) {
+        dataStore.setContactsSearchEnabled(enabled)
+    }
+
+    override suspend fun setAiSearchChipsEnabled(enabled: Boolean) {
+        dataStore.setAiSearchChipsEnabled(enabled)
+    }
+
+    override suspend fun setNewsFeedEnabled(enabled: Boolean) {
+        dataStore.setNewsFeedEnabled(enabled)
+    }
+
     override suspend fun setOnboardingCompleted(completed: Boolean) {
         dataStore.setOnboardingCompleted(completed)
     }

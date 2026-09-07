@@ -61,12 +61,19 @@ object LauncherSystemActions {
 
     fun openBrowser(context: Context) {
         try {
-            val intent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://www.google.com")).apply {
+            val intent = Intent.makeMainSelectorActivity(Intent.ACTION_MAIN, Intent.CATEGORY_APP_BROWSER).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK
             }
             context.startActivity(intent)
-        } catch (e: Exception) {
-            Toast.makeText(context, "Tarayıcı bulunamadı", Toast.LENGTH_SHORT).show()
+        } catch (_: Exception) {
+            try {
+                val fallbackIntent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://")).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                }
+                context.startActivity(fallbackIntent)
+            } catch (e: Exception) {
+                Toast.makeText(context, "Tarayıcı bulunamadı", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 

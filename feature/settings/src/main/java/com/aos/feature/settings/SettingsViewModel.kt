@@ -232,6 +232,30 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun setMathCalculatorEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            userPreferencesRepository.setMathCalculatorEnabled(enabled)
+        }
+    }
+
+    fun setContactsSearchEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            userPreferencesRepository.setContactsSearchEnabled(enabled)
+        }
+    }
+
+    fun setAiSearchChipsEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            userPreferencesRepository.setAiSearchChipsEnabled(enabled)
+        }
+    }
+
+    fun setNewsFeedEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            userPreferencesRepository.setNewsFeedEnabled(enabled)
+        }
+    }
+
     suspend fun exportBackup(password: String): Result<ByteArray> {
         return backupRepository.exportEncryptedBackup(password)
     }

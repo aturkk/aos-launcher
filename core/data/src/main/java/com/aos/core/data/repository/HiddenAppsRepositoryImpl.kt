@@ -30,16 +30,32 @@ class HiddenAppsRepositoryImpl @Inject constructor(
         preferencesDataStore.unhidePackage(packageName)
     }
 
+    private fun hashPin(pin: String): String {
+        val md = java.security.MessageDigest.getInstance("SHA-256")
+        val digest = md.digest(("aos_vault_salt_$pin").toByteArray())
+        return digest.joinToString("") { "%02x".format(it) }
+    }
+
     override fun getVaultPin(): Flow<String?> {
         return preferencesDataStore.vaultPin.flowOn(ioDispatcher)
     }
 
     override suspend fun setVaultPin(pin: String?) = withContext(ioDispatcher) {
-        preferencesDataStore.setVaultPin(pin)
+        val hashed = if (pin != null) hashPin(pin) else null
+        preferencesDataStore.setVaultPin(hashed)
     }
 
     override suspend fun verifyPin(pin: String): Boolean = withContext(ioDispatcher) {
-        val storedPin = preferencesDataStore.vaultPin.firstOrNull()
-        storedPin != null && storedPin == pin
+        val storedPin = preferencesDataStore.vaultPin.firstOrNull() ?: return@withContext false
+        val hashedInput = hashPin(pin)
+        if (storedPin == hashedInput) {
+            true
+        } else if (storedPin == pin) {
+            // Upgrade legacy plaintext PIN to hashed
+            preferencesDataStore.setVaultPin(hashedInput)
+            true
+        } else {
+            false
+        }
     }
 }

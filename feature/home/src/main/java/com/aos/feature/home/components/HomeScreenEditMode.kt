@@ -1,4 +1,4 @@
-﻿package com.aos.feature.home.components
+package com.aos.feature.home.components
 
 import android.content.Intent
 import android.widget.Toast
@@ -55,6 +55,8 @@ fun HomeScreenEditMode(
     pages: List<PageInfo>,
     itemsByPage: Map<Int, List<LauncherItem>>,
     currentPageIndex: Int,
+    gridRows: Int = 5,
+    gridColumns: Int = 4,
     onSelectPage: (Int) -> Unit,
     onAddNewPage: () -> Unit,
     onDeletePage: (Int) -> Unit,
@@ -229,12 +231,12 @@ fun HomeScreenEditMode(
                                             modifier = Modifier.fillMaxSize(),
                                             verticalArrangement = Arrangement.SpaceEvenly
                                         ) {
-                                            repeat(5) { r ->
+                                            repeat(gridRows) { r ->
                                                 Row(
                                                     modifier = Modifier.fillMaxWidth(),
                                                     horizontalArrangement = Arrangement.SpaceEvenly
                                                 ) {
-                                                    repeat(4) { c ->
+                                                    repeat(gridColumns) { c ->
                                                         val hasItem = pageItems.any { it.cellX == c && it.cellY == r }
                                                         Box(
                                                             modifier = Modifier

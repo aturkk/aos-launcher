@@ -77,8 +77,11 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    private val pageObservationJobs = mutableMapOf<Int, kotlinx.coroutines.Job>()
+
     private fun loadItemsForPage(pageIndex: Int) {
-        viewModelScope.launch {
+        if (pageObservationJobs[pageIndex]?.isActive == true) return
+        pageObservationJobs[pageIndex] = viewModelScope.launch {
             launcherRepository.getItemsForPage(pageIndex).collect { result ->
                 if (result is Result.Success) {
                     _uiState.update { current ->
@@ -154,6 +157,28 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    fun placeAppAt(app: AppInfo, cellX: Int, cellY: Int, pageIndex: Int) {
+        viewModelScope.launch {
+            val newItem = LauncherItem.AppItem(
+                pageIndex = pageIndex,
+                cellX = cellX,
+                cellY = cellY,
+                spanX = 1,
+                spanY = 1,
+                packageName = app.packageName,
+                activityName = app.activityName,
+                label = app.label
+            )
+            launcherRepository.saveItem(newItem)
+        }
+    }
+
+    fun updateGridDimensions(rows: Int, cols: Int) {
+        viewModelScope.launch {
+            userPreferencesRepository.setGridDimensions(rows, cols)
+        }
+    }
+
     fun addNewPage() {
         viewModelScope.launch {
             val newIndex = _uiState.value.pages.size
@@ -208,6 +233,7 @@ class HomeViewModel @Inject constructor(
     }
 
     fun deletePage(pageIndex: Int) {
+        pageObservationJobs.remove(pageIndex)?.cancel()
         viewModelScope.launch {
             launcherRepository.deletePage(pageIndex)
         }
@@ -232,6 +258,14 @@ class HomeViewModel @Inject constructor(
                 items = listOf(targetApp, draggedApp)
             )
             launcherRepository.saveItem(folder)
+        }
+    }
+
+    fun addAppToExistingFolder(draggedApp: LauncherItem.AppItem, targetFolder: LauncherItem.FolderItem) {
+        viewModelScope.launch {
+            launcherRepository.deleteItem(draggedApp.id)
+            val updatedItems = targetFolder.items + draggedApp
+            launcherRepository.updateFolder(targetFolder.id, targetFolder.title, updatedItems)
         }
     }
 

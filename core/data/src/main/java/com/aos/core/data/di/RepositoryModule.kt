@@ -86,5 +86,13 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindAppUpdateRepository(impl: AppUpdateRepositoryImpl): AppUpdateRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindContactSearchRepository(impl: com.aos.core.data.repository.ContactSearchRepositoryImpl): com.aos.core.domain.repository.ContactSearchRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindNewsFeedRepository(impl: com.aos.core.data.repository.NewsFeedRepositoryImpl): com.aos.core.domain.repository.NewsFeedRepository
 }
 

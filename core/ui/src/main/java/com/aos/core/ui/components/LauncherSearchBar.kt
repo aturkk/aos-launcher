@@ -39,6 +39,8 @@ fun LauncherSearchBar(
         SearchEngineOption.Google -> "Google'da ara..."
         SearchEngineOption.DuckDuckGo -> "DuckDuckGo ile gizli ara..."
         SearchEngineOption.Bing -> "Bing ile web'de ara..."
+        SearchEngineOption.ChatGPT -> "ChatGPT'ye sor..."
+        SearchEngineOption.Perplexity -> "Perplexity ile araştır..."
     }
 
     Box(

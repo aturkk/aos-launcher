@@ -27,5 +27,9 @@ interface UserPreferencesRepository {
     suspend fun setParallaxEnabled(enabled: Boolean)
     suspend fun setShowNotificationBadges(show: Boolean)
     suspend fun setSearchEngine(engine: SearchEngineOption)
+    suspend fun setMathCalculatorEnabled(enabled: Boolean)
+    suspend fun setContactsSearchEnabled(enabled: Boolean)
+    suspend fun setAiSearchChipsEnabled(enabled: Boolean)
+    suspend fun setNewsFeedEnabled(enabled: Boolean)
     suspend fun setOnboardingCompleted(completed: Boolean)
 }

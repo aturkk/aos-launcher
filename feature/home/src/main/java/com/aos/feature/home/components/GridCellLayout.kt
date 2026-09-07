@@ -1,9 +1,11 @@
-﻿package com.aos.feature.home.components
+package com.aos.feature.home.components
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.awaitLongPressOrCancellation
@@ -18,6 +20,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
@@ -40,9 +43,20 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.foundation.indication
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.PressInteraction
+import androidx.compose.material3.ripple
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import com.aos.core.domain.model.AppInfo
 import com.aos.core.domain.model.LauncherItem
 import com.aos.core.ui.components.AosAppIcon
 import com.aos.core.ui.theme.SquircleShape
@@ -58,10 +72,14 @@ fun GridCellLayout(
     iconShape: Shape = SquircleShape,
     showLabels: Boolean = true,
     notificationCounts: Map<String, Int> = emptyMap(),
+    isEditMode: Boolean = false,
+    pendingPlacedApp: AppInfo? = null,
+    onPlacePendingApp: (AppInfo, cellX: Int, cellY: Int) -> Unit = { _, _, _ -> },
     onAppClick: (packageName: String, activityName: String) -> Unit,
     onFolderClick: (LauncherItem.FolderItem) -> Unit,
     onMoveItem: (itemId: Long, cellX: Int, cellY: Int) -> Unit,
     onMergeIntoFolder: (draggedApp: LauncherItem.AppItem, targetApp: LauncherItem.AppItem) -> Unit,
+    onAddToExistingFolder: (draggedApp: LauncherItem.AppItem, targetFolder: LauncherItem.FolderItem) -> Unit = { _, _ -> },
     onRemoveItem: (itemId: Long) -> Unit,
     onAppInfo: (packageName: String) -> Unit,
     onUninstall: (packageName: String) -> Unit,
@@ -153,14 +171,28 @@ fun GridCellLayout(
 
             when (item) {
                 is LauncherItem.AppItem -> {
+                    val appInteraction = remember(item.id) { MutableInteractionSource() }
                     Box(
                         modifier = itemModifier
                             .size(width = cellWidth * item.spanX, height = cellHeight * item.spanY)
+                            .semantics {
+                                role = Role.Button
+                                contentDescription = item.customLabel ?: item.label
+                                onClick {
+                                    onAppClick(item.packageName, item.activityName)
+                                    true
+                                }
+                            }
+                            .indication(appInteraction, ripple(bounded = false, radius = 34.dp))
                             .pointerInput(item.id) {
                                 awaitEachGesture {
                                     val down = awaitFirstDown(requireUnconsumed = false)
+                                    val press = PressInteraction.Press(down.position)
+                                    appInteraction.tryEmit(press)
+
                                     val longPress = awaitLongPressOrCancellation(down.id)
                                     if (longPress != null) {
+                                        appInteraction.tryEmit(PressInteraction.Cancel(press))
                                         // Long press -> Start dragging
                                         draggedItemId = item.id
                                         dragOffset = Offset.Zero
@@ -186,6 +218,8 @@ fun GridCellLayout(
 
                                                     if (targetItem is LauncherItem.AppItem) {
                                                         onMergeIntoFolder(item, targetItem)
+                                                    } else if (targetItem is LauncherItem.FolderItem) {
+                                                        onAddToExistingFolder(item, targetItem)
                                                     } else if (targetItem == null) {
                                                         onMoveItem(item.id, targetCellX, targetCellY)
                                                     }
@@ -196,6 +230,7 @@ fun GridCellLayout(
                                         }
                                     } else {
                                         // Tap -> Open app
+                                        appInteraction.tryEmit(PressInteraction.Release(press))
                                         onAppClick(item.packageName, item.activityName)
                                     }
                                 }
@@ -213,18 +248,43 @@ fun GridCellLayout(
                             onClick = null,
                             onLongClick = null
                         )
+                        if (isEditMode) {
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .padding(top = 4.dp, end = 6.dp)
+                                    .size(16.dp)
+                                    .clip(CircleShape)
+                                    .background(Color.White.copy(alpha = 0.65f))
+                                    .border(1.dp, Color.Black.copy(alpha = 0.35f), CircleShape)
+                            )
+                        }
                     }
                 }
 
                 is LauncherItem.FolderItem -> {
+                    val folderInteraction = remember(item.id) { MutableInteractionSource() }
                     Box(
                         modifier = itemModifier
                             .size(width = cellWidth * item.spanX, height = cellHeight * item.spanY)
+                            .semantics {
+                                role = Role.Button
+                                contentDescription = item.title
+                                onClick {
+                                    onFolderClick(item)
+                                    true
+                                }
+                            }
+                            .indication(folderInteraction, ripple(bounded = false, radius = 34.dp))
                             .pointerInput(item.id) {
                                 awaitEachGesture {
                                     val down = awaitFirstDown(requireUnconsumed = false)
+                                    val press = PressInteraction.Press(down.position)
+                                    folderInteraction.tryEmit(press)
+
                                     val longPress = awaitLongPressOrCancellation(down.id)
                                     if (longPress != null) {
+                                        folderInteraction.tryEmit(PressInteraction.Cancel(press))
                                         // Long press -> Start dragging folder
                                         draggedItemId = item.id
                                         dragOffset = Offset.Zero
@@ -257,6 +317,7 @@ fun GridCellLayout(
                                         }
                                     } else {
                                         // Tap -> Open folder
+                                        folderInteraction.tryEmit(PressInteraction.Release(press))
                                         onFolderClick(item)
                                     }
                                 }
@@ -266,8 +327,20 @@ fun GridCellLayout(
                         FolderIconView(
                             folder = item,
                             showLabel = showLabels,
-                            onClick = { onFolderClick(item) }
+                            onClick = null
                         )
+
+                        if (isEditMode) {
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .padding(top = 4.dp, end = 6.dp)
+                                    .size(16.dp)
+                                    .clip(CircleShape)
+                                    .background(Color.White.copy(alpha = 0.65f))
+                                    .border(1.dp, Color.Black.copy(alpha = 0.35f), CircleShape)
+                            )
+                        }
                     }
                 }
 
@@ -335,10 +408,53 @@ fun GridCellLayout(
                                 Text("Widget", color = Color.White)
                             }
                         }
+
+                        if (isEditMode) {
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .padding(top = 6.dp, end = 6.dp)
+                                    .size(18.dp)
+                                    .clip(CircleShape)
+                                    .background(Color.White.copy(alpha = 0.65f))
+                                    .border(1.dp, Color.Black.copy(alpha = 0.35f), CircleShape)
+                            )
+                        }
                     }
                 }
 
                 else -> {}
+            }
+        }
+
+        // Empty cells drop targets when placing pending app from App Drawer
+        if (pendingPlacedApp != null) {
+            for (r in 0 until rows) {
+                for (c in 0 until columns) {
+                    val isOccupied = items.any { it.cellX == c && it.cellY == r }
+                    if (!isOccupied) {
+                        Box(
+                            modifier = Modifier
+                                .offset(x = cellWidth * c, y = cellHeight * r)
+                                .size(cellWidth, cellHeight)
+                                .padding(4.dp)
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.22f))
+                                .border(1.5.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(16.dp))
+                                .clickable {
+                                    onPlacePendingApp(pendingPlacedApp, c, r)
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "+ Yerleştir",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
             }
         }
     }

@@ -202,6 +202,18 @@ class AppUpdateRepositoryImpl @Inject constructor(
         try {
             if (!apkFile.exists()) return
 
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                if (!context.packageManager.canRequestPackageInstalls()) {
+                    val manageIntent = Intent(android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
+                        data = android.net.Uri.parse("package:${context.packageName}")
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                    }
+                    context.startActivity(manageIntent)
+                    _updateStatus.value = UpdateStatus.Error("Lütfen AOS Başlatıcı için 'Bilinmeyen uygulamaları yükle' iznini verip tekrar deneyin.")
+                    return
+                }
+            }
+
             val authority = "${context.packageName}.fileprovider"
             val uri = FileProvider.getUriForFile(context, authority, apkFile)
 

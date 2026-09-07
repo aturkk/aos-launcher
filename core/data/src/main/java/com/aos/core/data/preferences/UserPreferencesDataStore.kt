@@ -41,6 +41,10 @@ class UserPreferencesDataStore @Inject constructor(
         val SHOW_NOTIFICATION_BADGES = booleanPreferencesKey("show_notification_badges")
         val SEARCH_ENGINE = stringPreferencesKey("search_engine")
         val AI_SUGGESTIONS_ENABLED = booleanPreferencesKey("ai_suggestions_enabled")
+        val MATH_CALCULATOR_ENABLED = booleanPreferencesKey("math_calculator_enabled")
+        val CONTACTS_SEARCH_ENABLED = booleanPreferencesKey("contacts_search_enabled")
+        val AI_SEARCH_CHIPS_ENABLED = booleanPreferencesKey("ai_search_chips_enabled")
+        val NEWS_FEED_ENABLED = booleanPreferencesKey("news_feed_enabled")
         val HIDDEN_PACKAGES = stringSetPreferencesKey("hidden_packages")
         val VAULT_PIN = stringPreferencesKey("vault_pin")
         val ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
@@ -60,6 +64,10 @@ class UserPreferencesDataStore @Inject constructor(
         val parallax = preferences[PreferencesKeys.PARALLAX_ENABLED] ?: true
         val badges = preferences[PreferencesKeys.SHOW_NOTIFICATION_BADGES] ?: true
         val searchEngineStr = preferences[PreferencesKeys.SEARCH_ENGINE] ?: SearchEngineOption.Google.name
+        val mathCalc = preferences[PreferencesKeys.MATH_CALCULATOR_ENABLED] ?: true
+        val contactsSearch = preferences[PreferencesKeys.CONTACTS_SEARCH_ENABLED] ?: true
+        val aiChips = preferences[PreferencesKeys.AI_SEARCH_CHIPS_ENABLED] ?: true
+        val newsFeed = preferences[PreferencesKeys.NEWS_FEED_ENABLED] ?: true
         val onboardingCompleted = preferences[PreferencesKeys.ONBOARDING_COMPLETED] ?: false
 
         UserPreferences(
@@ -75,7 +83,11 @@ class UserPreferencesDataStore @Inject constructor(
                 selectedIconPackPackage = iconPack,
                 isParallaxEnabled = parallax,
                 showNotificationBadges = badges,
-                searchEngine = runCatching { SearchEngineOption.valueOf(searchEngineStr) }.getOrDefault(SearchEngineOption.Google)
+                searchEngine = runCatching { SearchEngineOption.valueOf(searchEngineStr) }.getOrDefault(SearchEngineOption.Google),
+                enableMathCalculator = mathCalc,
+                enableContactsSearch = contactsSearch,
+                enableAiSearchChips = aiChips,
+                enableNewsFeed = newsFeed
             ),
             isOnboardingCompleted = onboardingCompleted
         )
@@ -125,6 +137,10 @@ class UserPreferencesDataStore @Inject constructor(
             preferences[PreferencesKeys.PARALLAX_ENABLED] = config.isParallaxEnabled
             preferences[PreferencesKeys.SHOW_NOTIFICATION_BADGES] = config.showNotificationBadges
             preferences[PreferencesKeys.SEARCH_ENGINE] = config.searchEngine.name
+            preferences[PreferencesKeys.MATH_CALCULATOR_ENABLED] = config.enableMathCalculator
+            preferences[PreferencesKeys.CONTACTS_SEARCH_ENABLED] = config.enableContactsSearch
+            preferences[PreferencesKeys.AI_SEARCH_CHIPS_ENABLED] = config.enableAiSearchChips
+            preferences[PreferencesKeys.NEWS_FEED_ENABLED] = config.enableNewsFeed
             val iconPack = config.selectedIconPackPackage
             if (iconPack != null) {
                 preferences[PreferencesKeys.ICON_PACK] = iconPack
@@ -213,6 +229,30 @@ class UserPreferencesDataStore @Inject constructor(
     suspend fun setAutoUpdateCheckEnabled(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.AUTO_UPDATE_CHECK] = enabled
+        }
+    }
+
+    suspend fun setMathCalculatorEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.MATH_CALCULATOR_ENABLED] = enabled
+        }
+    }
+
+    suspend fun setContactsSearchEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.CONTACTS_SEARCH_ENABLED] = enabled
+        }
+    }
+
+    suspend fun setAiSearchChipsEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.AI_SEARCH_CHIPS_ENABLED] = enabled
+        }
+    }
+
+    suspend fun setNewsFeedEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.NEWS_FEED_ENABLED] = enabled
         }
     }
 }
