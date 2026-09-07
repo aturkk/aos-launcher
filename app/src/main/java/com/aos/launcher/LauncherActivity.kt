@@ -57,6 +57,7 @@ class LauncherActivity : ComponentActivity() {
     private lateinit var appWidgetManager: AppWidgetManager
     private var pendingWidgetId: Int = -1
     private var pendingTargetStackId: Long? = null
+    private var pendingTargetAppPopupId: Long? = null
     private var homeViewModelRef: HomeViewModel? = null
 
     private val pickWidgetLauncher = registerForActivityResult(
@@ -73,6 +74,7 @@ class LauncherActivity : ComponentActivity() {
                 pendingWidgetId = -1
             }
             pendingTargetStackId = null
+            pendingTargetAppPopupId = null
         }
     }
 
@@ -90,6 +92,7 @@ class LauncherActivity : ComponentActivity() {
                 pendingWidgetId = -1
             }
             pendingTargetStackId = null
+            pendingTargetAppPopupId = null
         }
     }
 
@@ -109,9 +112,13 @@ class LauncherActivity : ComponentActivity() {
 
     private fun completeAddWidget(appWidgetId: Int) {
         val targetStackId = pendingTargetStackId
+        val targetAppPopupId = pendingTargetAppPopupId
         if (targetStackId != null) {
             homeViewModelRef?.addWidgetToStackById(targetStackId, appWidgetId)
             pendingTargetStackId = null
+        } else if (targetAppPopupId != null) {
+            homeViewModelRef?.setAppPopupWidget(targetAppPopupId, appWidgetId)
+            pendingTargetAppPopupId = null
         } else {
             val appWidgetInfo = appWidgetManager.getAppWidgetInfo(appWidgetId) ?: return
             val minWidth = appWidgetInfo.minWidth
@@ -126,6 +133,7 @@ class LauncherActivity : ComponentActivity() {
     private fun startPickWidget(targetStackId: Long? = null) {
         try {
             pendingTargetStackId = targetStackId
+            pendingTargetAppPopupId = null
             val appWidgetId = widgetHost.allocateAppWidgetId()
             pendingWidgetId = appWidgetId
             val pickIntent = Intent(AppWidgetManager.ACTION_APPWIDGET_PICK).apply {
@@ -133,6 +141,24 @@ class LauncherActivity : ComponentActivity() {
             }
             pickWidgetLauncher.launch(pickIntent)
         } catch (e: Exception) {
+            pendingTargetStackId = null
+            pendingTargetAppPopupId = null
+            Toast.makeText(this, "Widget seçici açılamadı: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun startPickWidgetForAppPopup(appItemId: Long) {
+        try {
+            pendingTargetAppPopupId = appItemId
+            pendingTargetStackId = null
+            val appWidgetId = widgetHost.allocateAppWidgetId()
+            pendingWidgetId = appWidgetId
+            val pickIntent = Intent(AppWidgetManager.ACTION_APPWIDGET_PICK).apply {
+                putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
+            }
+            pickWidgetLauncher.launch(pickIntent)
+        } catch (e: Exception) {
+            pendingTargetAppPopupId = null
             pendingTargetStackId = null
             Toast.makeText(this, "Widget seçici açılamadı: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
         }
@@ -216,6 +242,7 @@ class LauncherActivity : ComponentActivity() {
                         onOpenSettings = { isSettingsOpen = true },
                         onAddWidget = { startPickWidget() },
                         onAddWidgetToStack = { targetId -> startPickWidget(targetId) },
+                        onAddPopupWidgetToApp = { appId -> startPickWidgetForAppPopup(appId) },
                         widgetHost = widgetHost,
                         onOpenSearch = { engine ->
                             val queryUrl = engine.buildSearchUrl("")

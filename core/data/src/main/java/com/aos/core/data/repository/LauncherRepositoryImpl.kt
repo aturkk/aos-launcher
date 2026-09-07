@@ -150,7 +150,8 @@ class LauncherRepositoryImpl @Inject constructor(
             packageName = packageName,
             activityName = activityName,
             label = title,
-            customIconUri = customIconUri
+            customIconUri = customIconUri,
+            popupWidgetId = if (appWidgetId != -1) appWidgetId else null
         )
     }
 
@@ -166,7 +167,8 @@ class LauncherRepositoryImpl @Inject constructor(
             packageName = packageName,
             activityName = activityName,
             title = label,
-            customIconUri = customIconUri
+            customIconUri = customIconUri,
+            appWidgetId = popupWidgetId ?: -1
         )
         is LauncherItem.FolderItem -> LauncherItemEntity(
             id = id,

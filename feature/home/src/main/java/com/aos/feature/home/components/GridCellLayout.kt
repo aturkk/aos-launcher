@@ -27,6 +27,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Layers
+import androidx.compose.material.icons.filled.Widgets
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -88,6 +89,9 @@ fun GridCellLayout(
     onAddWidgetToExistingStack: (draggedWidget: LauncherItem.WidgetItem, targetStack: LauncherItem.WidgetStackItem) -> Unit = { _, _ -> },
     onOpenStackSettings: (LauncherItem.WidgetStackItem) -> Unit = {},
     onAddWidgetToSingleWidget: (LauncherItem.WidgetItem) -> Unit = {},
+    onOpenPopupWidget: (LauncherItem.AppItem) -> Unit = {},
+    onAddPopupWidget: (LauncherItem.AppItem) -> Unit = {},
+    onRemovePopupWidget: (LauncherItem.AppItem) -> Unit = {},
     onRemoveItem: (itemId: Long) -> Unit,
     onAppInfo: (packageName: String) -> Unit,
     onUninstall: (packageName: String) -> Unit,
@@ -119,6 +123,7 @@ fun GridCellLayout(
 
         var draggedItemId by remember { mutableStateOf<Long?>(null) }
         var dragOffset by remember { mutableStateOf(Offset.Zero) }
+        val lastTapTimes = remember { mutableMapOf<Long, Long>() }
 
         // For pending app placement from app drawer: free-form drag
         var placementPointerOffset by remember(pendingPlacedApp) { mutableStateOf<Offset?>(null) }
@@ -255,9 +260,17 @@ fun GridCellLayout(
                                             dragOffset = Offset.Zero
                                         }
                                     } else {
-                                        // Tap -> Open app
+                                        // Tap / Double Tap detection
                                         appInteraction.tryEmit(PressInteraction.Release(press))
-                                        onAppClick(item.packageName, item.activityName)
+                                        val now = System.currentTimeMillis()
+                                        val lastTap = lastTapTimes[item.id] ?: 0L
+                                        if (item.popupWidgetId != null && (now - lastTap) < 380L) {
+                                            lastTapTimes[item.id] = 0L
+                                            onOpenPopupWidget(item)
+                                        } else {
+                                            lastTapTimes[item.id] = now
+                                            onAppClick(item.packageName, item.activityName)
+                                        }
                                     }
                                 }
                             },
@@ -274,7 +287,48 @@ fun GridCellLayout(
                             onClick = null,
                             onLongClick = null
                         )
+
+                        // Subtle Pop-up widget indicator dot when not in edit mode (Smart Launcher style)
+                        if (!isEditMode && item.popupWidgetId != null) {
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.BottomCenter)
+                                    .padding(bottom = if (showLabels) 14.dp else 4.dp)
+                                    .size(5.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(0xFFAB47BC))
+                            )
+                        }
+
                         if (isEditMode) {
+                            // Pop-up Widget action badge on Top-Left
+                            val hasPopup = item.popupWidgetId != null
+                            val badgeBg = if (hasPopup) Color(0xFF9C27B0) else MaterialTheme.colorScheme.primary.copy(alpha = 0.85f)
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.TopStart)
+                                    .padding(top = 2.dp, start = 2.dp)
+                                    .size(24.dp)
+                                    .clip(CircleShape)
+                                    .background(badgeBg)
+                                    .clickable {
+                                        if (hasPopup) {
+                                            onOpenPopupWidget(item)
+                                        } else {
+                                            onAddPopupWidget(item)
+                                        }
+                                    },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Widgets,
+                                    contentDescription = if (hasPopup) "Açılır Widget'ı Göster" else "Açılır Widget Ekle",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(13.dp)
+                                )
+                            }
+
+                            // Delete badge on Top-Right
                             Box(
                                 modifier = Modifier
                                     .align(Alignment.TopEnd)

@@ -84,6 +84,7 @@ import com.aos.feature.home.components.SmartWidgetPage
 import com.aos.feature.home.components.WidgetStackModalDialog
 import com.aos.feature.home.news.NewsFeedView
 import com.aos.feature.home.widget.LauncherWidgetHost
+import com.aos.feature.home.widget.PopupWidgetDialog
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -99,6 +100,7 @@ fun HomeScreen(
     onOpenSettings: () -> Unit,
     onAddWidget: () -> Unit = {},
     onAddWidgetToStack: (targetId: Long) -> Unit = {},
+    onAddPopupWidgetToApp: (appItemId: Long) -> Unit = {},
     widgetHost: LauncherWidgetHost? = null,
     onOpenSearch: (SearchEngineOption) -> Unit = {},
     onOpenVoiceSearch: () -> Unit = {},
@@ -127,6 +129,7 @@ fun HomeScreen(
 
     var activeFolder by remember { mutableStateOf<LauncherItem.FolderItem?>(null) }
     var activeStackForEditing by remember { mutableStateOf<LauncherItem.WidgetStackItem?>(null) }
+    var activePopupWidgetApp by remember { mutableStateOf<LauncherItem.AppItem?>(null) }
     var isEditMode by remember { mutableStateOf(false) }
     var showGridLayoutPicker by remember { mutableStateOf(false) }
 
@@ -458,6 +461,9 @@ fun HomeScreen(
                                                     onAddWidgetToExistingStack = { dragged, targetStack -> viewModel.addWidgetToExistingStack(dragged, targetStack) },
                                                     onOpenStackSettings = { stack -> activeStackForEditing = stack },
                                                     onAddWidgetToSingleWidget = { widgetItem -> onAddWidgetToStack(widgetItem.id) },
+                                                    onOpenPopupWidget = { app -> activePopupWidgetApp = app },
+                                                    onAddPopupWidget = { app -> onAddPopupWidgetToApp(app.id) },
+                                                    onRemovePopupWidget = { app -> viewModel.removeAppPopupWidget(app.id) },
                                                     onRemoveItem = viewModel::deleteItem,
                                                     onAppInfo = onAppInfo,
                                                     onUninstall = onUninstall,
@@ -576,6 +582,28 @@ fun HomeScreen(
                     activeStackForEditing = null
                 }
             )
+        }
+
+        // Pop-up Widget Dialog
+        activePopupWidgetApp?.let { appItem ->
+            val currentApp = uiState.itemsByPage.values.flatten().find { it.id == appItem.id } as? LauncherItem.AppItem ?: appItem
+            if (currentApp.popupWidgetId != null) {
+                PopupWidgetDialog(
+                    appItem = currentApp,
+                    widgetHost = widgetHost,
+                    onDismiss = { activePopupWidgetApp = null },
+                    onRemovePopupWidget = {
+                        viewModel.removeAppPopupWidget(currentApp.id)
+                        activePopupWidgetApp = null
+                    },
+                    onOpenApp = {
+                        activePopupWidgetApp = null
+                        handleAppClick(currentApp.packageName, currentApp.activityName)
+                    }
+                )
+            } else {
+                activePopupWidgetApp = null
+            }
         }
 
         // Mindful Friction / Blocked App Dialog

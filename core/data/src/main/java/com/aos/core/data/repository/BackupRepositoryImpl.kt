@@ -212,6 +212,7 @@ class BackupRepositoryImpl @Inject constructor(
                     iObj.put("label", item.label)
                     item.customLabel?.let { iObj.put("customLabel", it) }
                     item.customIconUri?.let { iObj.put("customIconUri", it) }
+                    item.popupWidgetId?.let { iObj.put("popupWidgetId", it) }
                 }
                 is LauncherItem.FolderItem -> {
                     iObj.put("type", "FOLDER")
@@ -626,7 +627,8 @@ class BackupRepositoryImpl @Inject constructor(
             packageName = packageName,
             activityName = activityName,
             label = title,
-            customIconUri = customIconUri
+            customIconUri = customIconUri,
+            popupWidgetId = if (appWidgetId != -1) appWidgetId else null
         )
     }
 
@@ -643,6 +645,7 @@ class BackupRepositoryImpl @Inject constructor(
             activityName = item.activityName,
             title = item.label,
             customIconUri = item.customIconUri,
+            appWidgetId = item.popupWidgetId ?: -1,
             isDockItem = item.pageIndex == -1
         )
         is LauncherItem.FolderItem -> {

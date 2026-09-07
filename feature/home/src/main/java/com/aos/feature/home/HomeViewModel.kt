@@ -391,6 +391,24 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    fun setAppPopupWidget(appItemId: Long, appWidgetId: Int) {
+        viewModelScope.launch {
+            val allItems = _uiState.value.itemsByPage.values.flatten()
+            val target = allItems.find { it.id == appItemId } as? LauncherItem.AppItem ?: return@launch
+            val updated = target.copy(popupWidgetId = appWidgetId)
+            launcherRepository.saveItem(updated)
+        }
+    }
+
+    fun removeAppPopupWidget(appItemId: Long) {
+        viewModelScope.launch {
+            val allItems = _uiState.value.itemsByPage.values.flatten()
+            val target = allItems.find { it.id == appItemId } as? LauncherItem.AppItem ?: return@launch
+            val updated = target.copy(popupWidgetId = null)
+            launcherRepository.saveItem(updated)
+        }
+    }
+
     fun deleteItem(itemId: Long) {
         viewModelScope.launch {
             launcherRepository.deleteItem(itemId)

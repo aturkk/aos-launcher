@@ -23,7 +23,8 @@ sealed class LauncherItem {
         val activityName: String,
         val label: String,
         val customLabel: String? = null,
-        val customIconUri: String? = null
+        val customIconUri: String? = null,
+        val popupWidgetId: Int? = null
     ) : LauncherItem()
 
     @Serializable
