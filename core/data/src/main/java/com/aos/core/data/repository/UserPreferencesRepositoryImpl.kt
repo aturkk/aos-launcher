@@ -1,0 +1,64 @@
+package com.aos.core.data.repository
+
+import com.aos.core.data.preferences.UserPreferencesDataStore
+import com.aos.core.domain.model.IconShapeOption
+import com.aos.core.domain.model.PageTransitionEffect
+import com.aos.core.domain.model.SearchEngineOption
+import com.aos.core.domain.model.ThemeConfig
+import com.aos.core.domain.repository.UserPreferences
+import com.aos.core.domain.repository.UserPreferencesRepository
+import kotlinx.coroutines.flow.Flow
+import javax.inject.Inject
+import javax.inject.Singleton
+
+@Singleton
+class UserPreferencesRepositoryImpl @Inject constructor(
+    private val dataStore: UserPreferencesDataStore
+) : UserPreferencesRepository {
+
+    override val userPreferences: Flow<UserPreferences> = dataStore.userPreferences
+
+    override suspend fun setGridDimensions(rows: Int, columns: Int) {
+        dataStore.setGridDimensions(rows, columns)
+    }
+
+    override suspend fun setShowAppLabels(show: Boolean) {
+        dataStore.setShowAppLabels(show)
+    }
+
+    override suspend fun setDoubleTapToSleep(enabled: Boolean) {
+        dataStore.setDoubleTapToSleep(enabled)
+    }
+
+    override suspend fun updateThemeConfig(config: ThemeConfig) {
+        dataStore.updateThemeConfig(config)
+    }
+
+    override suspend fun setIconShape(shape: IconShapeOption) {
+        dataStore.setIconShape(shape)
+    }
+
+    override suspend fun setPageTransition(effect: PageTransitionEffect) {
+        dataStore.setPageTransition(effect)
+    }
+
+    override suspend fun setIconPack(packageName: String?) {
+        dataStore.setIconPack(packageName)
+    }
+
+    override suspend fun setParallaxEnabled(enabled: Boolean) {
+        dataStore.setParallaxEnabled(enabled)
+    }
+
+    override suspend fun setShowNotificationBadges(show: Boolean) {
+        dataStore.setShowNotificationBadges(show)
+    }
+
+    override suspend fun setSearchEngine(engine: SearchEngineOption) {
+        dataStore.setSearchEngine(engine)
+    }
+
+    override suspend fun setOnboardingCompleted(completed: Boolean) {
+        dataStore.setOnboardingCompleted(completed)
+    }
+}
