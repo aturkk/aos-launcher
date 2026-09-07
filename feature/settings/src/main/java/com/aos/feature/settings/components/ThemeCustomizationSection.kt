@@ -25,6 +25,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -37,6 +38,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.aos.core.domain.model.DarkModeOption
 import com.aos.core.domain.model.IconPack
@@ -44,6 +46,7 @@ import com.aos.core.domain.model.IconShapeOption
 import com.aos.core.domain.model.PageTransitionEffect
 import com.aos.core.domain.model.ThemeConfig
 import com.aos.core.ui.theme.getIconShape
+import kotlin.math.roundToInt
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -55,6 +58,7 @@ fun ThemeCustomizationSection(
     onIconShapeChange: (IconShapeOption) -> Unit,
     onPageTransitionChange: (PageTransitionEffect) -> Unit,
     onIconPackChange: (String?) -> Unit,
+    onBlurDepthChange: (Float) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var showIconPackDialog by remember { mutableStateOf(false) }
@@ -244,6 +248,47 @@ fun ThemeCustomizationSection(
                     color = MaterialTheme.colorScheme.primary
                 )
             }
+        }
+
+        Spacer(modifier = Modifier.height(18.dp))
+
+        // Smart Launcher 6: Liquid Glass Blur Depth Slider
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(12.dp))
+                .background(Color.White.copy(alpha = 0.05f))
+                .border(1.dp, Color.White.copy(alpha = 0.1f), RoundedCornerShape(12.dp))
+                .padding(14.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Sıvı Cam (Liquid Glass) Bulanıklığı",
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                    Text(
+                        text = "Açılır widget kartları ve arama çubuğu için optik cam derinliği",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color.Gray
+                    )
+                }
+                Text(
+                    text = "%${(themeConfig.blurDepth * 100).roundToInt()}",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+            Spacer(modifier = Modifier.height(6.dp))
+            Slider(
+                value = themeConfig.blurDepth,
+                onValueChange = onBlurDepthChange,
+                valueRange = 0f..1f,
+                steps = 19
+            )
         }
     }
 

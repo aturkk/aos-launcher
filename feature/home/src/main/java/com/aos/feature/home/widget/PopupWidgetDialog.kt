@@ -16,9 +16,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DeleteOutline
-import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material.icons.filled.Widgets
 import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -43,7 +43,8 @@ fun PopupWidgetDialog(
     widgetHost: LauncherWidgetHost?,
     onDismiss: () -> Unit,
     onRemovePopupWidget: () -> Unit,
-    onOpenApp: () -> Unit
+    onOpenApp: () -> Unit,
+    blurDepth: Float = 0.6f
 ) {
     val widgetId = appItem.popupWidgetId ?: return
 
@@ -52,7 +53,7 @@ fun PopupWidgetDialog(
     ) {
         Surface(
             shape = RoundedCornerShape(26.dp),
-            color = Color(0xFF1A1A22).copy(alpha = 0.96f),
+            color = Color(0xFF1A1A22).copy(alpha = (0.75f + blurDepth * 0.22f).coerceIn(0.65f, 0.98f)),
             border = BorderStroke(1.dp, Color.White.copy(alpha = 0.15f)),
             shadowElevation = 16.dp,
             modifier = Modifier
@@ -111,7 +112,7 @@ fun PopupWidgetDialog(
                             modifier = Modifier.size(32.dp)
                         ) {
                             Icon(
-                                imageVector = Icons.Default.OpenInNew,
+                                imageVector = Icons.AutoMirrored.Filled.OpenInNew,
                                 contentDescription = "Uygulamayı Aç",
                                 tint = Color.White.copy(alpha = 0.8f),
                                 modifier = Modifier.size(18.dp)

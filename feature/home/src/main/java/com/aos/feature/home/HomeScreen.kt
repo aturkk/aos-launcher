@@ -70,10 +70,12 @@ import com.aos.core.ui.sensor.parallaxSensorEffect
 import com.aos.core.ui.theme.getIconShape
 import com.aos.core.domain.model.HomeLayoutMode
 import com.aos.feature.home.components.AssistantBottomSheet
+import com.aos.feature.home.components.ArchLayout
 import com.aos.feature.home.components.DockBar
 import com.aos.feature.home.components.FlowerLayout
 import com.aos.feature.home.components.FolderModalDialog
 import com.aos.feature.home.components.GridCellLayout
+import com.aos.feature.home.components.HoneycombLayout
 import com.aos.feature.home.components.GridLayoutPickerDialog
 import com.aos.feature.home.components.OxygenEditModeBottomBar
 import com.aos.feature.home.components.OxygenEditModeTopBar
@@ -424,19 +426,53 @@ fun HomeScreen(
                                                 .fillMaxWidth()
                                                 .weight(1f)
                                         ) {
-                                            if (uiState.userPreferences.themeConfig.homeLayoutMode == HomeLayoutMode.Flower && homeIndex == 0) {
-                                                FlowerLayout(
-                                                    items = pageItems,
-                                                    iconShape = activeIconShape,
-                                                    showLabels = uiState.userPreferences.showAppLabels,
-                                                    notificationCounts = activeBadges,
-                                                    onAppClick = handleAppClick,
-                                                    onFolderClick = { folder -> activeFolder = folder },
-                                                    onEmptySlotClick = onOpenAppDrawer,
-                                                    isEditMode = effectiveEditMode,
-                                                    onRemoveItem = viewModel::deleteItem,
-                                                    onItemLongClick = { isEditMode = true }
-                                                )
+                                            val mode = uiState.userPreferences.themeConfig.homeLayoutMode
+                                            if (homeIndex == 0 && mode != HomeLayoutMode.Grid) {
+                                                when (mode) {
+                                                    HomeLayoutMode.Flower -> {
+                                                        FlowerLayout(
+                                                            items = pageItems,
+                                                            iconShape = activeIconShape,
+                                                            showLabels = uiState.userPreferences.showAppLabels,
+                                                            notificationCounts = activeBadges,
+                                                            onAppClick = handleAppClick,
+                                                            onFolderClick = { folder -> activeFolder = folder },
+                                                            onEmptySlotClick = onOpenAppDrawer,
+                                                            isEditMode = effectiveEditMode,
+                                                            onRemoveItem = viewModel::deleteItem,
+                                                            onItemLongClick = { isEditMode = true }
+                                                        )
+                                                    }
+                                                    HomeLayoutMode.Honeycomb -> {
+                                                        HoneycombLayout(
+                                                            items = pageItems,
+                                                            iconShape = activeIconShape,
+                                                            showLabels = uiState.userPreferences.showAppLabels,
+                                                            notificationCounts = activeBadges,
+                                                            onAppClick = handleAppClick,
+                                                            onFolderClick = { folder -> activeFolder = folder },
+                                                            onEmptySlotClick = onOpenAppDrawer,
+                                                            isEditMode = effectiveEditMode,
+                                                            onRemoveItem = viewModel::deleteItem,
+                                                            onItemLongClick = { isEditMode = true }
+                                                        )
+                                                    }
+                                                    HomeLayoutMode.Arch -> {
+                                                        ArchLayout(
+                                                            items = pageItems,
+                                                            iconShape = activeIconShape,
+                                                            showLabels = uiState.userPreferences.showAppLabels,
+                                                            notificationCounts = activeBadges,
+                                                            onAppClick = handleAppClick,
+                                                            onFolderClick = { folder -> activeFolder = folder },
+                                                            onEmptySlotClick = onOpenAppDrawer,
+                                                            isEditMode = effectiveEditMode,
+                                                            onRemoveItem = viewModel::deleteItem,
+                                                            onItemLongClick = { isEditMode = true }
+                                                        )
+                                                    }
+                                                    HomeLayoutMode.Grid -> Unit
+                                                }
                                             } else {
                                                 GridCellLayout(
                                                     items = pageItems,
@@ -599,7 +635,8 @@ fun HomeScreen(
                     onOpenApp = {
                         activePopupWidgetApp = null
                         handleAppClick(currentApp.packageName, currentApp.activityName)
-                    }
+                    },
+                    blurDepth = uiState.userPreferences.themeConfig.blurDepth
                 )
             } else {
                 activePopupWidgetApp = null

@@ -286,6 +286,24 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun setHideStatusBar(hide: Boolean) {
+        viewModelScope.launch {
+            userPreferencesRepository.setHideStatusBar(hide)
+        }
+    }
+
+    fun setHideNavigationBar(hide: Boolean) {
+        viewModelScope.launch {
+            userPreferencesRepository.setHideNavigationBar(hide)
+        }
+    }
+
+    fun setBlurDepth(depth: Float) {
+        viewModelScope.launch {
+            userPreferencesRepository.setBlurDepth(depth)
+        }
+    }
+
     suspend fun exportBackup(password: String): Result<ByteArray> {
         return backupRepository.exportEncryptedBackup(password)
     }

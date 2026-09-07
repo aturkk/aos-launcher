@@ -146,7 +146,8 @@ fun SettingsScreen(
                                 onIconShapeChange = viewModel::setIconShape,
                                 onPageTransitionChange = viewModel::setPageTransition,
                                 onIconPackChange = viewModel::setIconPack,
-                                onParallaxChange = viewModel::setParallaxEnabled
+                                onParallaxChange = viewModel::setParallaxEnabled,
+                                onBlurDepthChange = viewModel::setBlurDepth
                             )
                         }
 
@@ -162,7 +163,9 @@ fun SettingsScreen(
                                 onNewsFeedChange = viewModel::setNewsFeedEnabled,
                                 onSearchBarBottomChange = viewModel::setSearchBarAtBottom,
                                 onClockWidgetChange = viewModel::setClockWidgetEnabled,
-                                onSmartContextCardChange = viewModel::setSmartContextCardEnabled
+                                onSmartContextCardChange = viewModel::setSmartContextCardEnabled,
+                                onHideStatusBarChange = viewModel::setHideStatusBar,
+                                onHideNavigationBarChange = viewModel::setHideNavigationBar
                             )
                         }
 

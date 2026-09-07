@@ -39,6 +39,8 @@ fun HomeScreenSettingsContent(
     onSearchBarBottomChange: (Boolean) -> Unit = {},
     onClockWidgetChange: (Boolean) -> Unit = {},
     onSmartContextCardChange: (Boolean) -> Unit = {},
+    onHideStatusBarChange: (Boolean) -> Unit = {},
+    onHideNavigationBarChange: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val gridOptions = listOf(
@@ -53,59 +55,108 @@ fun HomeScreenSettingsContent(
             .fillMaxWidth()
             .padding(16.dp)
     ) {
-        // Smart Launcher Home Layout Mode (Grid vs Flower)
+        // Smart Launcher Home Layout Mode (Grid, Flower, Honeycomb, Arch)
         Text(
             text = "Ana Ekran İkon Düzeni",
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.primary
         )
         Text(
-            text = "Klasik ızgara veya Smart Launcher'ın dairesel çiçek düzeni",
+            text = "Klasik ızgara veya Smart Launcher geometrik ikon dizilimleri",
             style = MaterialTheme.typography.bodySmall,
             color = Color.Gray
         )
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            val isGrid = preferences.themeConfig.homeLayoutMode == HomeLayoutMode.Grid
-            val isFlower = preferences.themeConfig.homeLayoutMode == HomeLayoutMode.Flower
+        val currentMode = preferences.themeConfig.homeLayoutMode
 
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(if (isGrid) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f) else Color.White.copy(alpha = 0.05f))
-                    .border(1.dp, if (isGrid) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.15f), RoundedCornerShape(14.dp))
-                    .clickable { onHomeLayoutModeChange(HomeLayoutMode.Grid) }
-                    .padding(vertical = 12.dp),
-                contentAlignment = Alignment.Center
+        // 2x2 Grid of Geometric Layout Modes
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            // Row 1: Grid & Flower
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text(
-                    text = "📱 Standart Izgara",
-                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
-                    color = if (isGrid) MaterialTheme.colorScheme.primary else Color.White
-                )
+                val isGrid = currentMode == HomeLayoutMode.Grid
+                val isFlower = currentMode == HomeLayoutMode.Flower
+
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(if (isGrid) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f) else Color.White.copy(alpha = 0.05f))
+                        .border(1.dp, if (isGrid) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.15f), RoundedCornerShape(14.dp))
+                        .clickable { onHomeLayoutModeChange(HomeLayoutMode.Grid) }
+                        .padding(vertical = 12.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "📱 Standart Izgara",
+                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                        color = if (isGrid) MaterialTheme.colorScheme.primary else Color.White
+                    )
+                }
+
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(if (isFlower) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f) else Color.White.copy(alpha = 0.05f))
+                        .border(1.dp, if (isFlower) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.15f), RoundedCornerShape(14.dp))
+                        .clickable { onHomeLayoutModeChange(HomeLayoutMode.Flower) }
+                        .padding(vertical = 12.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "🌸 Çiçek (Flower)",
+                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                        color = if (isFlower) MaterialTheme.colorScheme.primary else Color.White
+                    )
+                }
             }
 
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(if (isFlower) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f) else Color.White.copy(alpha = 0.05f))
-                    .border(1.dp, if (isFlower) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.15f), RoundedCornerShape(14.dp))
-                    .clickable { onHomeLayoutModeChange(HomeLayoutMode.Flower) }
-                    .padding(vertical = 12.dp),
-                contentAlignment = Alignment.Center
+            // Row 2: Honeycomb & Arch
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text(
-                    text = "🌸 Çiçek (Flower)",
-                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
-                    color = if (isFlower) MaterialTheme.colorScheme.primary else Color.White
-                )
+                val isHoneycomb = currentMode == HomeLayoutMode.Honeycomb
+                val isArch = currentMode == HomeLayoutMode.Arch
+
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(if (isHoneycomb) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f) else Color.White.copy(alpha = 0.05f))
+                        .border(1.dp, if (isHoneycomb) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.15f), RoundedCornerShape(14.dp))
+                        .clickable { onHomeLayoutModeChange(HomeLayoutMode.Honeycomb) }
+                        .padding(vertical = 12.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "⬡ Petek (Honeycomb)",
+                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                        color = if (isHoneycomb) MaterialTheme.colorScheme.primary else Color.White
+                    )
+                }
+
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(if (isArch) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f) else Color.White.copy(alpha = 0.05f))
+                        .border(1.dp, if (isArch) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.15f), RoundedCornerShape(14.dp))
+                        .clickable { onHomeLayoutModeChange(HomeLayoutMode.Arch) }
+                        .padding(vertical = 12.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "⌒ Kemer (Arch)",
+                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                        color = if (isArch) MaterialTheme.colorScheme.primary else Color.White
+                    )
+                }
             }
         }
 
@@ -305,6 +356,56 @@ fun HomeScreenSettingsContent(
             Switch(
                 checked = preferences.themeConfig.showNotificationBadges,
                 onCheckedChange = onNotificationBadgesChange
+            )
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
+        HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // Smart Launcher 6: Ultra Immersive Mode
+        Text(
+            text = "Sürükleyici Ekran (Ultra Immersive Mode)",
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.primary
+        )
+        Text(
+            text = "Ekran alanını maksimize etmek için sistem çubuklarını gizleyin (Kenardan kaydırarak geçici açabilirsiniz)",
+            style = MaterialTheme.typography.bodySmall,
+            color = Color.Gray
+        )
+
+        Spacer(modifier = Modifier.height(14.dp))
+
+        // Hide Status Bar
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text("Durum Çubuğunu Gizle (Saat, Pil, Bildirimler)", style = MaterialTheme.typography.bodyLarge)
+                Text("Üst sistem çubuğunu gizleyerek temiz bir tam ekran sunar", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+            }
+            Switch(
+                checked = preferences.themeConfig.hideStatusBar,
+                onCheckedChange = onHideStatusBarChange
+            )
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Hide Navigation Bar
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text("Gezinme Çubuğunu Gizle (Tam Ekran Duvar Kağıdı)", style = MaterialTheme.typography.bodyLarge)
+                Text("Alt gezinme çubuğunu gizleyerek başlatıcıyı uçtan uca yayar", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+            }
+            Switch(
+                checked = preferences.themeConfig.hideNavigationBar,
+                onCheckedChange = onHideNavigationBarChange
             )
         }
     }

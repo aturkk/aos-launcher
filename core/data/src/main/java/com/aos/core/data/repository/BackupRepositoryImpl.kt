@@ -307,6 +307,10 @@ class BackupRepositoryImpl @Inject constructor(
         tcObj.put("isParallaxEnabled", tc.isParallaxEnabled)
         tcObj.put("showNotificationBadges", tc.showNotificationBadges)
         tcObj.put("searchEngine", tc.searchEngine.name)
+        tcObj.put("homeLayoutMode", tc.homeLayoutMode.name)
+        tcObj.put("hideStatusBar", tc.hideStatusBar)
+        tcObj.put("hideNavigationBar", tc.hideNavigationBar)
+        tcObj.put("blurDepth", tc.blurDepth.toDouble())
         prefsObj.put("themeConfig", tcObj)
 
         root.put("userPreferences", prefsObj)
@@ -503,6 +507,10 @@ class BackupRepositoryImpl @Inject constructor(
         val isParallaxEnabled = tcObj?.optBoolean("isParallaxEnabled", true) ?: true
         val showNotificationBadges = tcObj?.optBoolean("showNotificationBadges", true) ?: true
         val searchEngine = try { SearchEngineOption.valueOf(tcObj?.optString("searchEngine", "Google") ?: "Google") } catch (e: Exception) { SearchEngineOption.Google }
+        val homeLayoutMode = try { com.aos.core.domain.model.HomeLayoutMode.valueOf(tcObj?.optString("homeLayoutMode", "Grid") ?: "Grid") } catch (e: Exception) { com.aos.core.domain.model.HomeLayoutMode.Grid }
+        val hideStatusBar = tcObj?.optBoolean("hideStatusBar", false) ?: false
+        val hideNavigationBar = tcObj?.optBoolean("hideNavigationBar", false) ?: false
+        val blurDepth = (tcObj?.optDouble("blurDepth", 0.6) ?: 0.6).toFloat()
 
         val themeConfig = ThemeConfig(
             darkMode = darkMode,
@@ -514,7 +522,11 @@ class BackupRepositoryImpl @Inject constructor(
             animationSpeedMultiplier = animationSpeedMultiplier,
             isParallaxEnabled = isParallaxEnabled,
             showNotificationBadges = showNotificationBadges,
-            searchEngine = searchEngine
+            searchEngine = searchEngine,
+            homeLayoutMode = homeLayoutMode,
+            hideStatusBar = hideStatusBar,
+            hideNavigationBar = hideNavigationBar,
+            blurDepth = blurDepth
         )
 
         val userPreferences = UserPreferences(

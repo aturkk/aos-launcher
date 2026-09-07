@@ -97,4 +97,16 @@ class UserPreferencesRepositoryImpl @Inject constructor(
     override suspend fun setOnboardingCompleted(completed: Boolean) {
         dataStore.setOnboardingCompleted(completed)
     }
+
+    override suspend fun setHideStatusBar(hide: Boolean) {
+        dataStore.setHideStatusBar(hide)
+    }
+
+    override suspend fun setHideNavigationBar(hide: Boolean) {
+        dataStore.setHideNavigationBar(hide)
+    }
+
+    override suspend fun setBlurDepth(depth: Float) {
+        dataStore.setBlurDepth(depth)
+    }
 }

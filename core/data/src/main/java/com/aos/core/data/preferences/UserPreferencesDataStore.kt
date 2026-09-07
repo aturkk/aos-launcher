@@ -5,6 +5,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
@@ -50,6 +51,9 @@ class UserPreferencesDataStore @Inject constructor(
         val SEARCH_BAR_AT_BOTTOM = booleanPreferencesKey("search_bar_at_bottom")
         val ENABLE_CLOCK_WIDGET = booleanPreferencesKey("enable_clock_widget")
         val ENABLE_SMART_CONTEXT_CARD = booleanPreferencesKey("enable_smart_context_card")
+        val HIDE_STATUS_BAR = booleanPreferencesKey("hide_status_bar")
+        val HIDE_NAVIGATION_BAR = booleanPreferencesKey("hide_navigation_bar")
+        val BLUR_DEPTH = floatPreferencesKey("blur_depth")
         val HIDDEN_PACKAGES = stringSetPreferencesKey("hidden_packages")
         val VAULT_PIN = stringPreferencesKey("vault_pin")
         val ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
@@ -78,6 +82,9 @@ class UserPreferencesDataStore @Inject constructor(
         val searchAtBottom = preferences[PreferencesKeys.SEARCH_BAR_AT_BOTTOM] ?: false
         val clockWidget = preferences[PreferencesKeys.ENABLE_CLOCK_WIDGET] ?: true
         val smartCard = preferences[PreferencesKeys.ENABLE_SMART_CONTEXT_CARD] ?: true
+        val hideStatus = preferences[PreferencesKeys.HIDE_STATUS_BAR] ?: false
+        val hideNav = preferences[PreferencesKeys.HIDE_NAVIGATION_BAR] ?: false
+        val blurDepth = preferences[PreferencesKeys.BLUR_DEPTH] ?: 0.6f
         val onboardingCompleted = preferences[PreferencesKeys.ONBOARDING_COMPLETED] ?: false
 
         UserPreferences(
@@ -102,7 +109,10 @@ class UserPreferencesDataStore @Inject constructor(
                 homeLayoutMode = runCatching { com.aos.core.domain.model.HomeLayoutMode.valueOf(homeLayoutStr) }.getOrDefault(com.aos.core.domain.model.HomeLayoutMode.Grid),
                 searchBarAtBottom = searchAtBottom,
                 enableClockWidget = clockWidget,
-                enableSmartContextCard = smartCard
+                enableSmartContextCard = smartCard,
+                hideStatusBar = hideStatus,
+                hideNavigationBar = hideNav,
+                blurDepth = blurDepth
             ),
             isOnboardingCompleted = onboardingCompleted
         )
@@ -156,6 +166,10 @@ class UserPreferencesDataStore @Inject constructor(
             preferences[PreferencesKeys.CONTACTS_SEARCH_ENABLED] = config.enableContactsSearch
             preferences[PreferencesKeys.AI_SEARCH_CHIPS_ENABLED] = config.enableAiSearchChips
             preferences[PreferencesKeys.NEWS_FEED_ENABLED] = config.enableNewsFeed
+            preferences[PreferencesKeys.HOME_LAYOUT_MODE] = config.homeLayoutMode.name
+            preferences[PreferencesKeys.HIDE_STATUS_BAR] = config.hideStatusBar
+            preferences[PreferencesKeys.HIDE_NAVIGATION_BAR] = config.hideNavigationBar
+            preferences[PreferencesKeys.BLUR_DEPTH] = config.blurDepth
             val iconPack = config.selectedIconPackPackage
             if (iconPack != null) {
                 preferences[PreferencesKeys.ICON_PACK] = iconPack
@@ -298,6 +312,24 @@ class UserPreferencesDataStore @Inject constructor(
     suspend fun setSmartContextCardEnabled(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.ENABLE_SMART_CONTEXT_CARD] = enabled
+        }
+    }
+
+    suspend fun setHideStatusBar(hide: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.HIDE_STATUS_BAR] = hide
+        }
+    }
+
+    suspend fun setHideNavigationBar(hide: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.HIDE_NAVIGATION_BAR] = hide
+        }
+    }
+
+    suspend fun setBlurDepth(depth: Float) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.BLUR_DEPTH] = depth
         }
     }
 }

@@ -24,11 +24,15 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aos.core.common.util.LauncherSystemActions
@@ -188,6 +192,24 @@ class LauncherActivity : ComponentActivity() {
             val homeUiState by homeViewModel.uiState.collectAsStateWithLifecycle()
             val themeConfig = homeUiState.userPreferences.themeConfig
             val notificationCounts by AosNotificationListenerService.notificationCounts.collectAsStateWithLifecycle()
+
+            // Smart Launcher 6 Ultra Immersive Mode: Control Status & Navigation Bar visibility
+            val insetsController = remember(window) {
+                WindowCompat.getInsetsController(window, window.decorView)
+            }
+            LaunchedEffect(themeConfig.hideStatusBar, themeConfig.hideNavigationBar) {
+                insetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                if (themeConfig.hideStatusBar) {
+                    insetsController.hide(WindowInsetsCompat.Type.statusBars())
+                } else {
+                    insetsController.show(WindowInsetsCompat.Type.statusBars())
+                }
+                if (themeConfig.hideNavigationBar) {
+                    insetsController.hide(WindowInsetsCompat.Type.navigationBars())
+                } else {
+                    insetsController.show(WindowInsetsCompat.Type.navigationBars())
+                }
+            }
 
             val isDark = when (themeConfig.darkMode) {
                 DarkModeOption.System -> isSystemInDarkTheme()

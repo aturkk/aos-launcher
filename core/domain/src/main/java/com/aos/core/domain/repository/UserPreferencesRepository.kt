@@ -38,4 +38,7 @@ interface UserPreferencesRepository {
     suspend fun setClockWidgetEnabled(enabled: Boolean)
     suspend fun setSmartContextCardEnabled(enabled: Boolean)
     suspend fun setOnboardingCompleted(completed: Boolean)
+    suspend fun setHideStatusBar(hide: Boolean)
+    suspend fun setHideNavigationBar(hide: Boolean)
+    suspend fun setBlurDepth(depth: Float)
 }

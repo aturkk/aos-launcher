@@ -1,4 +1,4 @@
-﻿package com.aos.feature.settings.components
+package com.aos.feature.settings.components
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -27,6 +27,7 @@ fun ThemeSettingsContent(
     onPageTransitionChange: (PageTransitionEffect) -> Unit,
     onIconPackChange: (String?) -> Unit,
     onParallaxChange: (Boolean) -> Unit,
+    onBlurDepthChange: (Float) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -41,7 +42,8 @@ fun ThemeSettingsContent(
             onDynamicColorsChange = onDynamicColorsChange,
             onIconShapeChange = onIconShapeChange,
             onPageTransitionChange = onPageTransitionChange,
-            onIconPackChange = onIconPackChange
+            onIconPackChange = onIconPackChange,
+            onBlurDepthChange = onBlurDepthChange
         )
 
         Spacer(modifier = Modifier.height(24.dp))

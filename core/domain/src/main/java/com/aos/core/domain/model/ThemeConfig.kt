@@ -47,7 +47,9 @@ enum class SearchEngineOption {
 
 enum class HomeLayoutMode {
     Grid,
-    Flower
+    Flower,
+    Honeycomb,
+    Arch
 }
 
 data class ThemeConfig(
@@ -69,5 +71,8 @@ data class ThemeConfig(
     val homeLayoutMode: HomeLayoutMode = HomeLayoutMode.Grid,
     val searchBarAtBottom: Boolean = false,
     val enableClockWidget: Boolean = true,
-    val enableSmartContextCard: Boolean = true
+    val enableSmartContextCard: Boolean = true,
+    val hideStatusBar: Boolean = false,
+    val hideNavigationBar: Boolean = false,
+    val blurDepth: Float = 0.6f
 )
