@@ -42,6 +42,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aos.feature.settings.components.AboutAndDiagnosticsSection
 import com.aos.feature.settings.components.AdvancedCustomizationSection
 import com.aos.feature.settings.components.AiSettingsSection
+import com.aos.feature.settings.components.AppUpdateSection
 import com.aos.feature.settings.components.BackupSyncSection
 import com.aos.feature.settings.components.NotificationHistorySection
 import com.aos.feature.settings.components.PluginManagementSection
@@ -63,6 +64,8 @@ fun SettingsScreen(
     val plugins by viewModel.plugins.collectAsStateWithLifecycle()
     val notificationHistory by viewModel.notificationHistory.collectAsStateWithLifecycle()
     val crashReports by viewModel.crashReports.collectAsStateWithLifecycle()
+    val updateStatus by viewModel.updateStatus.collectAsStateWithLifecycle()
+    val isAutoUpdateEnabled by viewModel.isAutoUpdateEnabled.collectAsStateWithLifecycle()
     val scrollState = rememberScrollState()
     val context = LocalContext.current
 
@@ -296,6 +299,19 @@ fun SettingsScreen(
                     Text("• İki Parmak Küçült (Pinch): Sayfaları kuşbakışı yönetir", style = MaterialTheme.typography.bodyMedium)
                 }
             }
+
+            Spacer(modifier = Modifier.height(24.dp))
+            HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // GitHub Auto-Update Section
+            AppUpdateSection(
+                updateStatus = updateStatus,
+                isAutoUpdateEnabled = isAutoUpdateEnabled,
+                onCheckForUpdates = viewModel::checkForUpdates,
+                onDownloadAndInstall = viewModel::downloadAndInstallUpdate,
+                onToggleAutoUpdate = viewModel::setAutoUpdateEnabled
+            )
 
             Spacer(modifier = Modifier.height(24.dp))
             HorizontalDivider(color = Color.White.copy(alpha = 0.1f))

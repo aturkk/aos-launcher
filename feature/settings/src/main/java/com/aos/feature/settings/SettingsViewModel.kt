@@ -22,6 +22,9 @@ import com.aos.core.domain.model.NotificationRecord
 import com.aos.core.domain.repository.NotificationHistoryRepository
 import com.aos.core.domain.model.CrashReport
 import com.aos.core.domain.repository.CrashDiagnosticsRepository
+import com.aos.core.domain.model.AppUpdateInfo
+import com.aos.core.domain.model.UpdateStatus
+import com.aos.core.domain.repository.AppUpdateRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -40,7 +43,8 @@ class SettingsViewModel @Inject constructor(
     private val backupRepository: BackupRepository,
     private val pluginRepository: PluginRepository,
     private val notificationHistoryRepository: NotificationHistoryRepository,
-    private val crashDiagnosticsRepository: CrashDiagnosticsRepository
+    private val crashDiagnosticsRepository: CrashDiagnosticsRepository,
+    private val appUpdateRepository: AppUpdateRepository
 ) : ViewModel() {
 
     val preferences: StateFlow<UserPreferences> = userPreferencesRepository.userPreferences
@@ -93,9 +97,28 @@ class SettingsViewModel @Inject constructor(
     private val _crashReports = MutableStateFlow<List<CrashReport>>(emptyList())
     val crashReports: StateFlow<List<CrashReport>> = _crashReports.asStateFlow()
 
+    val updateStatus: StateFlow<UpdateStatus> = appUpdateRepository.updateStatus
+    val isAutoUpdateEnabled: StateFlow<Boolean> = appUpdateRepository.isAutoUpdateCheckEnabled
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = true
+        )
+
     init {
         loadInstalledIconPacks()
         loadCrashReports()
+        checkAutoUpdateOnStartup()
+    }
+
+    private fun checkAutoUpdateOnStartup() {
+        viewModelScope.launch {
+            appUpdateRepository.isAutoUpdateCheckEnabled.collect { isAuto ->
+                if (isAuto && appUpdateRepository.updateStatus.value is UpdateStatus.Idle) {
+                    appUpdateRepository.checkForUpdates()
+                }
+            }
+        }
     }
 
     fun loadCrashReports() {
@@ -239,5 +262,27 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             notificationHistoryRepository.deleteNotification(id)
         }
+    }
+
+    fun checkForUpdates() {
+        viewModelScope.launch {
+            appUpdateRepository.checkForUpdates()
+        }
+    }
+
+    fun downloadAndInstallUpdate(updateInfo: AppUpdateInfo) {
+        viewModelScope.launch {
+            appUpdateRepository.downloadAndInstallUpdate(updateInfo)
+        }
+    }
+
+    fun setAutoUpdateEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            appUpdateRepository.setAutoUpdateCheckEnabled(enabled)
+        }
+    }
+
+    fun resetUpdateStatus() {
+        appUpdateRepository.resetUpdateStatus()
     }
 }

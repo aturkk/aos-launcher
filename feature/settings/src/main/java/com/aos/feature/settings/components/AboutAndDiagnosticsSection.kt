@@ -99,7 +99,7 @@ fun AboutAndDiagnosticsSection(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text("Sürüm", style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
-                    Text("v1.4.0-release (Kararlı)", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                    Text("v1.4.1-release (Kararlı)", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
                 }
 
                 Row(

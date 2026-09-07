@@ -24,6 +24,8 @@ import com.aos.core.data.repository.HiddenAppsRepositoryImpl
 import com.aos.core.domain.repository.HiddenAppsRepository
 import com.aos.core.data.repository.CrashDiagnosticsRepositoryImpl
 import com.aos.core.domain.repository.CrashDiagnosticsRepository
+import com.aos.core.data.repository.AppUpdateRepositoryImpl
+import com.aos.core.domain.repository.AppUpdateRepository
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -80,5 +82,9 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindCrashDiagnosticsRepository(impl: CrashDiagnosticsRepositoryImpl): CrashDiagnosticsRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindAppUpdateRepository(impl: AppUpdateRepositoryImpl): AppUpdateRepository
 }
 

@@ -44,6 +44,7 @@ class UserPreferencesDataStore @Inject constructor(
         val HIDDEN_PACKAGES = stringSetPreferencesKey("hidden_packages")
         val VAULT_PIN = stringPreferencesKey("vault_pin")
         val ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
+        val AUTO_UPDATE_CHECK = booleanPreferencesKey("auto_update_check")
     }
 
     val userPreferences: Flow<UserPreferences> = context.dataStore.data.map { preferences ->
@@ -202,6 +203,16 @@ class UserPreferencesDataStore @Inject constructor(
             } else {
                 preferences.remove(PreferencesKeys.VAULT_PIN)
             }
+        }
+    }
+
+    val isAutoUpdateCheckEnabled: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[PreferencesKeys.AUTO_UPDATE_CHECK] ?: true
+    }
+
+    suspend fun setAutoUpdateCheckEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.AUTO_UPDATE_CHECK] = enabled
         }
     }
 }
