@@ -14,15 +14,30 @@ android {
         applicationId = "com.aos.launcher"
         minSdk = 26
         targetSdk = 35
-        versionCode = 2
-        versionName = "1.4.1"
+        versionCode = 3
+        versionName = "1.4.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        create("shared") {
+            storeFile = file("${rootProject.projectDir}/keystore/aos_launcher.keystore")
+            storePassword = "android"
+            keyAlias = "aoslauncher"
+            keyPassword = "android"
+            enableV1Signing = true
+            enableV2Signing = true
+        }
+    }
+
     buildTypes {
+        debug {
+            signingConfig = signingConfigs.getByName("shared")
+        }
         release {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("shared")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

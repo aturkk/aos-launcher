@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.CircularProgressIndicator
 import com.aos.feature.appdrawer.components.HiddenVaultDialog
 import androidx.compose.material3.Icon
@@ -60,6 +61,7 @@ fun AppDrawerScreen(
     onAppInfo: (packageName: String) -> Unit,
     onUninstall: (packageName: String) -> Unit,
     onClose: () -> Unit,
+    onOpenSettings: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -102,6 +104,13 @@ fun AppDrawerScreen(
                 },
                 trailingIcon = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(onClick = onOpenSettings) {
+                            Icon(
+                                imageVector = Icons.Default.Settings,
+                                contentDescription = "Başlatıcı Ayarları",
+                                tint = Color.White.copy(alpha = 0.85f)
+                            )
+                        }
                         IconButton(onClick = { isVaultOpen = true }) {
                             Icon(
                                 imageVector = if (uiState.isVaultUnlocked) Icons.Default.LockOpen else Icons.Default.Lock,

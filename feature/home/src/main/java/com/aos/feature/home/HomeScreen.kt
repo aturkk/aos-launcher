@@ -4,11 +4,15 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -44,6 +48,7 @@ import com.aos.feature.home.components.AssistantBottomSheet
 import com.aos.feature.home.components.DockBar
 import com.aos.feature.home.components.FolderModalDialog
 import com.aos.feature.home.components.GridCellLayout
+import com.aos.feature.home.components.HomeActionMenuSheet
 import com.aos.feature.home.components.PageIndicator
 import com.aos.feature.home.components.PagesOverviewSheet
 import com.aos.feature.home.components.ProfileSwitcherBar
@@ -76,6 +81,7 @@ fun HomeScreen(
 
     var activeFolder by remember { mutableStateOf<LauncherItem.FolderItem?>(null) }
     var isOverviewSheetOpen by remember { mutableStateOf(false) }
+    var isHomeMenuOpen by remember { mutableStateOf(false) }
 
     // Blocked App mindful friction dialog state
     var blockedAppPending by remember { mutableStateOf<Pair<String, String>?>(null) }
@@ -101,13 +107,16 @@ fun HomeScreen(
             .fillMaxSize()
             .statusBarsPadding()
             .navigationBarsPadding()
-            // Double-tap to sleep on wallpaper
+            // Double-tap to sleep and long-press for Home Menu on wallpaper
             .pointerInput(uiState.userPreferences.doubleTapToSleep) {
                 detectTapGestures(
                     onDoubleTap = {
                         if (uiState.userPreferences.doubleTapToSleep) {
                             onDoubleTapSleep()
                         }
+                    },
+                    onLongPress = {
+                        isHomeMenuOpen = true
                     }
                 )
             }
@@ -215,16 +224,21 @@ fun HomeScreen(
                             onMergeIntoFolder = { dragged, target -> viewModel.mergeAppsIntoFolder(dragged, target) },
                             onRemoveItem = viewModel::deleteItem,
                             onAppInfo = onAppInfo,
-                            onUninstall = onUninstall
+                            onUninstall = onUninstall,
+                            onEmptyAreaLongClick = { isHomeMenuOpen = true }
                         )
                     }
                 }
 
-                // Page Indicator
+                // Page Indicator (Clickable to manage pages)
                 PageIndicator(
                     pageCount = pagerState.pageCount,
                     currentPage = pagerState.currentPage,
-                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                    modifier = Modifier
+                        .align(Alignment.CenterHorizontally)
+                        .clip(RoundedCornerShape(12.dp))
+                        .clickable { isOverviewSheetOpen = true }
+                        .padding(horizontal = 12.dp, vertical = 6.dp)
                 )
 
                 Spacer(modifier = Modifier.height(6.dp))
@@ -237,6 +251,15 @@ fun HomeScreen(
                 )
             }
         }
+
+        // Home Screen Long-Press Action Menu (Settings, Manage Pages, Wallpaper, Widgets)
+        HomeActionMenuSheet(
+            isOpen = isHomeMenuOpen,
+            onDismiss = { isHomeMenuOpen = false },
+            onOpenSettings = onOpenSettings,
+            onOpenPagesOverview = { isOverviewSheetOpen = true },
+            onAddNewPage = viewModel::addNewPage
+        )
 
         // Folder Modal Dialog
         activeFolder?.let { folder ->

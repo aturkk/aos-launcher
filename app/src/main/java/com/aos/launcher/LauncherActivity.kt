@@ -218,7 +218,11 @@ class LauncherActivity : ComponentActivity() {
                             },
                             onAppInfo = { pkg -> openAppInfo(pkg) },
                             onUninstall = { pkg -> uninstallApp(pkg) },
-                            onClose = { isAppDrawerOpen = false }
+                            onClose = { isAppDrawerOpen = false },
+                            onOpenSettings = {
+                                isAppDrawerOpen = false
+                                isSettingsOpen = true
+                            }
                         )
                     }
 
