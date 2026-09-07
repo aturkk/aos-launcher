@@ -300,6 +300,97 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    fun mergeWidgetsIntoStack(draggedWidget: LauncherItem.WidgetItem, targetWidget: LauncherItem.WidgetItem) {
+        viewModelScope.launch {
+            launcherRepository.deleteItem(draggedWidget.id)
+            launcherRepository.deleteItem(targetWidget.id)
+
+            val stack = LauncherItem.WidgetStackItem(
+                pageIndex = targetWidget.pageIndex,
+                cellX = targetWidget.cellX,
+                cellY = targetWidget.cellY,
+                spanX = targetWidget.spanX.coerceAtLeast(draggedWidget.spanX),
+                spanY = targetWidget.spanY.coerceAtLeast(draggedWidget.spanY),
+                widgets = listOf(targetWidget, draggedWidget)
+            )
+            launcherRepository.saveItem(stack)
+        }
+    }
+
+    fun addWidgetToExistingStack(draggedWidget: LauncherItem.WidgetItem, targetStack: LauncherItem.WidgetStackItem) {
+        viewModelScope.launch {
+            launcherRepository.deleteItem(draggedWidget.id)
+            val updatedWidgets = targetStack.widgets + draggedWidget
+            launcherRepository.updateWidgetStack(targetStack.id, updatedWidgets)
+        }
+    }
+
+    fun addWidgetToStackById(targetItemId: Long, newAppWidgetId: Int) {
+        viewModelScope.launch {
+            val allItems = _uiState.value.itemsByPage.values.flatten()
+            val target = allItems.find { it.id == targetItemId } ?: return@launch
+
+            when (target) {
+                is LauncherItem.WidgetItem -> {
+                    launcherRepository.deleteItem(target.id)
+                    val newWidget = LauncherItem.WidgetItem(
+                        id = System.currentTimeMillis(),
+                        pageIndex = target.pageIndex,
+                        cellX = target.cellX,
+                        cellY = target.cellY,
+                        spanX = target.spanX,
+                        spanY = target.spanY,
+                        appWidgetId = newAppWidgetId
+                    )
+                    val stack = LauncherItem.WidgetStackItem(
+                        pageIndex = target.pageIndex,
+                        cellX = target.cellX,
+                        cellY = target.cellY,
+                        spanX = target.spanX,
+                        spanY = target.spanY,
+                        widgets = listOf(target, newWidget)
+                    )
+                    launcherRepository.saveItem(stack)
+                }
+                is LauncherItem.WidgetStackItem -> {
+                    val newWidget = LauncherItem.WidgetItem(
+                        id = System.currentTimeMillis(),
+                        pageIndex = target.pageIndex,
+                        cellX = target.cellX,
+                        cellY = target.cellY,
+                        spanX = target.spanX,
+                        spanY = target.spanY,
+                        appWidgetId = newAppWidgetId
+                    )
+                    val updatedWidgets = target.widgets + newWidget
+                    launcherRepository.updateWidgetStack(target.id, updatedWidgets)
+                }
+                else -> {}
+            }
+        }
+    }
+
+    fun removeWidgetFromStack(stack: LauncherItem.WidgetStackItem, widgetToRemoveId: Long) {
+        viewModelScope.launch {
+            val remainingWidgets = stack.widgets.filter { it.id != widgetToRemoveId }
+            if (remainingWidgets.isEmpty()) {
+                launcherRepository.deleteItem(stack.id)
+            } else if (remainingWidgets.size == 1) {
+                launcherRepository.deleteItem(stack.id)
+                val singleWidget = remainingWidgets.first().copy(
+                    pageIndex = stack.pageIndex,
+                    cellX = stack.cellX,
+                    cellY = stack.cellY,
+                    spanX = stack.spanX,
+                    spanY = stack.spanY
+                )
+                launcherRepository.saveItem(singleWidget)
+            } else {
+                launcherRepository.updateWidgetStack(stack.id, remainingWidgets)
+            }
+        }
+    }
+
     fun deleteItem(itemId: Long) {
         viewModelScope.launch {
             launcherRepository.deleteItem(itemId)

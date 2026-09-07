@@ -228,6 +228,21 @@ class BackupRepositoryImpl @Inject constructor(
                     }
                     iObj.put("folderItems", subApps)
                 }
+                is LauncherItem.WidgetStackItem -> {
+                    iObj.put("type", "WIDGET_STACK")
+                    val subWidgets = JSONArray()
+                    item.widgets.forEach { sub ->
+                        val sObj = JSONObject()
+                        sObj.put("id", sub.id)
+                        sObj.put("appWidgetId", sub.appWidgetId)
+                        sObj.put("providerPackage", sub.providerPackage)
+                        sObj.put("providerClass", sub.providerClass)
+                        sObj.put("spanX", sub.spanX)
+                        sObj.put("spanY", sub.spanY)
+                        subWidgets.put(sObj)
+                    }
+                    iObj.put("widgets", subWidgets)
+                }
                 is LauncherItem.WidgetItem -> {
                     iObj.put("type", "WIDGET")
                     iObj.put("appWidgetId", item.appWidgetId)
@@ -551,6 +566,37 @@ class BackupRepositoryImpl @Inject constructor(
                 items = list
             )
         }
+        "WIDGET_STACK" -> {
+            val list = mutableListOf<LauncherItem.WidgetItem>()
+            try {
+                val arr = JSONArray(folderItemsJson)
+                for (i in 0 until arr.length()) {
+                    val sub = arr.getJSONObject(i)
+                    list.add(
+                        LauncherItem.WidgetItem(
+                            id = sub.optLong("id", 0L),
+                            pageIndex = pageIndex,
+                            cellX = cellX,
+                            cellY = cellY,
+                            spanX = sub.optInt("spanX", spanX),
+                            spanY = sub.optInt("spanY", spanY),
+                            appWidgetId = sub.optInt("appWidgetId", -1),
+                            providerPackage = sub.optString("providerPackage", ""),
+                            providerClass = sub.optString("providerClass", "")
+                        )
+                    )
+                }
+            } catch (_: Exception) {}
+            LauncherItem.WidgetStackItem(
+                id = id,
+                pageIndex = pageIndex,
+                cellX = cellX,
+                cellY = cellY,
+                spanX = spanX,
+                spanY = spanY,
+                widgets = list
+            )
+        }
         "WIDGET" -> LauncherItem.WidgetItem(
             id = id,
             pageIndex = pageIndex,
@@ -620,6 +666,30 @@ class BackupRepositoryImpl @Inject constructor(
                 title = item.title,
                 folderItemsJson = arr.toString(),
                 isDockItem = item.pageIndex == -1
+            )
+        }
+        is LauncherItem.WidgetStackItem -> {
+            val arr = JSONArray()
+            item.widgets.forEach { sub ->
+                val obj = JSONObject()
+                obj.put("id", sub.id)
+                obj.put("appWidgetId", sub.appWidgetId)
+                obj.put("providerPackage", sub.providerPackage)
+                obj.put("providerClass", sub.providerClass)
+                obj.put("spanX", sub.spanX)
+                obj.put("spanY", sub.spanY)
+                arr.put(obj)
+            }
+            LauncherItemEntity(
+                id = item.id,
+                pageIndex = item.pageIndex,
+                cellX = item.cellX,
+                cellY = item.cellY,
+                spanX = item.spanX,
+                spanY = item.spanY,
+                itemType = "WIDGET_STACK",
+                folderItemsJson = arr.toString(),
+                isDockItem = false
             )
         }
         is LauncherItem.WidgetItem -> LauncherItemEntity(

@@ -26,6 +26,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -64,6 +65,7 @@ import com.aos.core.ui.components.AosAppIcon
 import com.aos.core.ui.theme.SquircleShape
 import com.aos.feature.home.widget.LauncherWidgetHost
 import com.aos.feature.home.widget.SystemWidgetView
+import com.aos.feature.home.widget.WidgetStackView
 import kotlin.math.roundToInt
 
 @Composable
@@ -82,6 +84,10 @@ fun GridCellLayout(
     onMoveItem: (itemId: Long, cellX: Int, cellY: Int) -> Unit,
     onMergeIntoFolder: (draggedApp: LauncherItem.AppItem, targetApp: LauncherItem.AppItem) -> Unit,
     onAddToExistingFolder: (draggedApp: LauncherItem.AppItem, targetFolder: LauncherItem.FolderItem) -> Unit = { _, _ -> },
+    onMergeIntoWidgetStack: (draggedWidget: LauncherItem.WidgetItem, targetWidget: LauncherItem.WidgetItem) -> Unit = { _, _ -> },
+    onAddWidgetToExistingStack: (draggedWidget: LauncherItem.WidgetItem, targetStack: LauncherItem.WidgetStackItem) -> Unit = { _, _ -> },
+    onOpenStackSettings: (LauncherItem.WidgetStackItem) -> Unit = {},
+    onAddWidgetToSingleWidget: (LauncherItem.WidgetItem) -> Unit = {},
     onRemoveItem: (itemId: Long) -> Unit,
     onAppInfo: (packageName: String) -> Unit,
     onUninstall: (packageName: String) -> Unit,
@@ -432,13 +438,29 @@ fun GridCellLayout(
                                                     val targetCellX = (totalOffsetX / cellWidthPx).toInt().coerceIn(0, columns - item.spanX)
                                                     val targetCellY = (totalOffsetY / cellHeightPx).toInt().coerceIn(0, rows - item.spanY)
 
-                                                    val isOccupied = items.any {
-                                                        it.id != item.id &&
-                                                        it.cellX < (targetCellX + item.spanX) && (it.cellX + it.spanX) > targetCellX &&
-                                                        it.cellY < (targetCellY + item.spanY) && (it.cellY + it.spanY) > targetCellY
-                                                    }
-                                                    if (!isOccupied) {
-                                                        onMoveItem(item.id, targetCellX, targetCellY)
+                                                    val targetWidget = items.firstOrNull { other ->
+                                                        other.id != item.id && other is LauncherItem.WidgetItem &&
+                                                        other.cellX == targetCellX && other.cellY == targetCellY
+                                                    } as? LauncherItem.WidgetItem
+
+                                                    val targetStack = items.firstOrNull { other ->
+                                                        other.id != item.id && other is LauncherItem.WidgetStackItem &&
+                                                        other.cellX == targetCellX && other.cellY == targetCellY
+                                                    } as? LauncherItem.WidgetStackItem
+
+                                                    if (targetWidget != null) {
+                                                        onMergeIntoWidgetStack(item, targetWidget)
+                                                    } else if (targetStack != null) {
+                                                        onAddWidgetToExistingStack(item, targetStack)
+                                                    } else {
+                                                        val isOccupied = items.any {
+                                                            it.id != item.id &&
+                                                            it.cellX < (targetCellX + item.spanX) && (it.cellX + it.spanX) > targetCellX &&
+                                                            it.cellY < (targetCellY + item.spanY) && (it.cellY + it.spanY) > targetCellY
+                                                        }
+                                                        if (!isOccupied) {
+                                                            onMoveItem(item.id, targetCellX, targetCellY)
+                                                        }
                                                     }
                                                 }
                                                 draggedItemId = null
@@ -451,6 +473,25 @@ fun GridCellLayout(
                                         )
                                     }
                             )
+
+                            // Blue circular "+ / Stack" button on top-left to convert/add to stack
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.TopStart)
+                                    .padding(top = 4.dp, start = 4.dp)
+                                    .size(24.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.9f))
+                                    .clickable { onAddWidgetToSingleWidget(item) },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Layers,
+                                    contentDescription = "Yığına Dönüştür",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(13.dp)
+                                )
+                            }
 
                             // Red circular delete button on top-right
                             Box(
@@ -470,6 +511,77 @@ fun GridCellLayout(
                                     modifier = Modifier.size(14.dp)
                                 )
                             }
+                        }
+                    }
+                }
+
+                is LauncherItem.WidgetStackItem -> {
+                    Box(
+                        modifier = itemModifier
+                            .size(width = cellWidth * item.spanX, height = cellHeight * item.spanY)
+                            .clip(RoundedCornerShape(16.dp))
+                    ) {
+                        WidgetStackView(
+                            stack = item,
+                            widgetHost = widgetHost,
+                            isEditMode = isEditMode,
+                            onLongClick = {
+                                draggedItemId = item.id
+                                dragOffset = Offset.Zero
+                            },
+                            onOpenStackSettings = {
+                                onOpenStackSettings(item)
+                            },
+                            onRemoveStack = {
+                                onRemoveItem(item.id)
+                            },
+                            modifier = Modifier.fillMaxSize()
+                        )
+
+                        if (isEditMode) {
+                            // Transparent drag layer in edit mode to avoid native view touch stealing
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .pointerInput(item.id) {
+                                        detectDragGestures(
+                                            onDragStart = {
+                                                draggedItemId = item.id
+                                                dragOffset = Offset.Zero
+                                            },
+                                            onDrag = { change, dragAmount ->
+                                                change.consume()
+                                                dragOffset += dragAmount
+                                            },
+                                            onDragEnd = {
+                                                val totalOffsetX = with(density) { baseOffsetX.toPx() } + dragOffset.x
+                                                val totalOffsetY = with(density) { baseOffsetY.toPx() } + dragOffset.y
+
+                                                if (totalOffsetY < deleteThresholdPx) {
+                                                    onRemoveItem(item.id)
+                                                } else {
+                                                    val targetCellX = (totalOffsetX / cellWidthPx).toInt().coerceIn(0, columns - item.spanX)
+                                                    val targetCellY = (totalOffsetY / cellHeightPx).toInt().coerceIn(0, rows - item.spanY)
+
+                                                    val isOccupied = items.any {
+                                                        it.id != item.id &&
+                                                        it.cellX < (targetCellX + item.spanX) && (it.cellX + it.spanX) > targetCellX &&
+                                                        it.cellY < (targetCellY + item.spanY) && (it.cellY + it.spanY) > targetCellY
+                                                    }
+                                                    if (!isOccupied) {
+                                                        onMoveItem(item.id, targetCellX, targetCellY)
+                                                    }
+                                                }
+                                                draggedItemId = null
+                                                dragOffset = Offset.Zero
+                                            },
+                                            onDragCancel = {
+                                                draggedItemId = null
+                                                dragOffset = Offset.Zero
+                                            }
+                                        )
+                                    }
+                            )
                         }
                     }
                 }

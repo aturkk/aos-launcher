@@ -56,6 +56,7 @@ class LauncherActivity : ComponentActivity() {
     private lateinit var widgetHost: LauncherWidgetHost
     private lateinit var appWidgetManager: AppWidgetManager
     private var pendingWidgetId: Int = -1
+    private var pendingTargetStackId: Long? = null
     private var homeViewModelRef: HomeViewModel? = null
 
     private val pickWidgetLauncher = registerForActivityResult(
@@ -71,6 +72,7 @@ class LauncherActivity : ComponentActivity() {
                 widgetHost.deleteAppWidgetId(pendingWidgetId)
                 pendingWidgetId = -1
             }
+            pendingTargetStackId = null
         }
     }
 
@@ -87,6 +89,7 @@ class LauncherActivity : ComponentActivity() {
                 widgetHost.deleteAppWidgetId(pendingWidgetId)
                 pendingWidgetId = -1
             }
+            pendingTargetStackId = null
         }
     }
 
@@ -105,17 +108,24 @@ class LauncherActivity : ComponentActivity() {
     }
 
     private fun completeAddWidget(appWidgetId: Int) {
-        val appWidgetInfo = appWidgetManager.getAppWidgetInfo(appWidgetId) ?: return
-        val minWidth = appWidgetInfo.minWidth
-        val minHeight = appWidgetInfo.minHeight
-        val spanX = ((minWidth + 30) / 70).coerceIn(1, 4)
-        val spanY = ((minHeight + 30) / 70).coerceIn(1, 4)
-        homeViewModelRef?.addWidget(appWidgetId, spanX, spanY)
+        val targetStackId = pendingTargetStackId
+        if (targetStackId != null) {
+            homeViewModelRef?.addWidgetToStackById(targetStackId, appWidgetId)
+            pendingTargetStackId = null
+        } else {
+            val appWidgetInfo = appWidgetManager.getAppWidgetInfo(appWidgetId) ?: return
+            val minWidth = appWidgetInfo.minWidth
+            val minHeight = appWidgetInfo.minHeight
+            val spanX = ((minWidth + 30) / 70).coerceIn(1, 4)
+            val spanY = ((minHeight + 30) / 70).coerceIn(1, 4)
+            homeViewModelRef?.addWidget(appWidgetId, spanX, spanY)
+        }
         pendingWidgetId = -1
     }
 
-    private fun startPickWidget() {
+    private fun startPickWidget(targetStackId: Long? = null) {
         try {
+            pendingTargetStackId = targetStackId
             val appWidgetId = widgetHost.allocateAppWidgetId()
             pendingWidgetId = appWidgetId
             val pickIntent = Intent(AppWidgetManager.ACTION_APPWIDGET_PICK).apply {
@@ -123,6 +133,7 @@ class LauncherActivity : ComponentActivity() {
             }
             pickWidgetLauncher.launch(pickIntent)
         } catch (e: Exception) {
+            pendingTargetStackId = null
             Toast.makeText(this, "Widget seçici açılamadı: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
         }
     }
@@ -204,6 +215,7 @@ class LauncherActivity : ComponentActivity() {
                         },
                         onOpenSettings = { isSettingsOpen = true },
                         onAddWidget = { startPickWidget() },
+                        onAddWidgetToStack = { targetId -> startPickWidget(targetId) },
                         widgetHost = widgetHost,
                         onOpenSearch = { engine ->
                             val queryUrl = engine.buildSearchUrl("")

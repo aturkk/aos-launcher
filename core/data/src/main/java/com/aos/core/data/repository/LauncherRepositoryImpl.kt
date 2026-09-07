@@ -71,6 +71,11 @@ class LauncherRepositoryImpl @Inject constructor(
         launcherItemDao.updateFolderContent(folderId, newTitle, serialized)
     }
 
+    override suspend fun updateWidgetStack(stackId: Long, widgets: List<LauncherItem.WidgetItem>) = withContext(ioDispatcher) {
+        val serialized = json.encodeToString(widgets)
+        launcherItemDao.updateFolderContent(stackId, "", serialized)
+    }
+
     override suspend fun addPage(pageIndex: Int, isHomePage: Boolean): Long = withContext(ioDispatcher) {
         pageDao.insertPage(PageEntity(pageIndex = pageIndex, isHomePage = isHomePage))
     }
@@ -98,6 +103,22 @@ class LauncherRepositoryImpl @Inject constructor(
                 spanY = spanY,
                 title = title.ifEmpty { "Klasör" },
                 items = itemsList
+            )
+        }
+        "WIDGET_STACK" -> {
+            val widgetList = try {
+                json.decodeFromString<List<LauncherItem.WidgetItem>>(folderItemsJson)
+            } catch (e: Exception) {
+                emptyList()
+            }
+            LauncherItem.WidgetStackItem(
+                id = id,
+                pageIndex = pageIndex,
+                cellX = cellX,
+                cellY = cellY,
+                spanX = spanX,
+                spanY = spanY,
+                widgets = widgetList
             )
         }
         "WIDGET" -> LauncherItem.WidgetItem(
@@ -157,6 +178,16 @@ class LauncherRepositoryImpl @Inject constructor(
             itemType = "FOLDER",
             title = title,
             folderItemsJson = json.encodeToString(items)
+        )
+        is LauncherItem.WidgetStackItem -> LauncherItemEntity(
+            id = id,
+            pageIndex = pageIndex,
+            cellX = cellX,
+            cellY = cellY,
+            spanX = spanX,
+            spanY = spanY,
+            itemType = "WIDGET_STACK",
+            folderItemsJson = json.encodeToString(widgets)
         )
         is LauncherItem.WidgetItem -> LauncherItemEntity(
             id = id,

@@ -53,6 +53,18 @@ sealed class LauncherItem {
     ) : LauncherItem()
 
     @Serializable
+    data class WidgetStackItem(
+        override val id: Long = 0L,
+        override val pageIndex: Int = 0,
+        override val cellX: Int = 0,
+        override val cellY: Int = 0,
+        override val spanX: Int = 2,
+        override val spanY: Int = 2,
+        val widgets: List<WidgetItem> = emptyList(),
+        val activeIndex: Int = 0
+    ) : LauncherItem()
+
+    @Serializable
     data class ShortcutItem(
         override val id: Long = 0L,
         override val pageIndex: Int = 0,

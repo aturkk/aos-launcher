@@ -81,6 +81,7 @@ import com.aos.feature.home.components.PageIndicator
 import com.aos.feature.home.components.ProfileSwitcherBar
 import com.aos.feature.home.components.SmartContextCardWidget
 import com.aos.feature.home.components.SmartWidgetPage
+import com.aos.feature.home.components.WidgetStackModalDialog
 import com.aos.feature.home.news.NewsFeedView
 import com.aos.feature.home.widget.LauncherWidgetHost
 import kotlinx.coroutines.launch
@@ -97,6 +98,7 @@ fun HomeScreen(
     onDoubleTapSleep: () -> Unit,
     onOpenSettings: () -> Unit,
     onAddWidget: () -> Unit = {},
+    onAddWidgetToStack: (targetId: Long) -> Unit = {},
     widgetHost: LauncherWidgetHost? = null,
     onOpenSearch: (SearchEngineOption) -> Unit = {},
     onOpenVoiceSearch: () -> Unit = {},
@@ -124,6 +126,7 @@ fun HomeScreen(
     val coroutineScope = rememberCoroutineScope()
 
     var activeFolder by remember { mutableStateOf<LauncherItem.FolderItem?>(null) }
+    var activeStackForEditing by remember { mutableStateOf<LauncherItem.WidgetStackItem?>(null) }
     var isEditMode by remember { mutableStateOf(false) }
     var showGridLayoutPicker by remember { mutableStateOf(false) }
 
@@ -451,6 +454,10 @@ fun HomeScreen(
                                                     onMoveItem = { itemId, x, y -> viewModel.moveItem(itemId, x, y, homeIndex) },
                                                     onMergeIntoFolder = { dragged, target -> viewModel.mergeAppsIntoFolder(dragged, target) },
                                                     onAddToExistingFolder = { dragged, targetFolder -> viewModel.addAppToExistingFolder(dragged, targetFolder) },
+                                                    onMergeIntoWidgetStack = { dragged, target -> viewModel.mergeWidgetsIntoStack(dragged, target) },
+                                                    onAddWidgetToExistingStack = { dragged, targetStack -> viewModel.addWidgetToExistingStack(dragged, targetStack) },
+                                                    onOpenStackSettings = { stack -> activeStackForEditing = stack },
+                                                    onAddWidgetToSingleWidget = { widgetItem -> onAddWidgetToStack(widgetItem.id) },
                                                     onRemoveItem = viewModel::deleteItem,
                                                     onAppInfo = onAppInfo,
                                                     onUninstall = onUninstall,
@@ -548,6 +555,25 @@ fun HomeScreen(
                 onDeleteFolder = {
                     viewModel.deleteItem(folder.id)
                     activeFolder = null
+                }
+            )
+        }
+
+        // Widget Stack Modal Dialog
+        activeStackForEditing?.let { stackState ->
+            val currentStack = uiState.itemsByPage.values.flatten().find { it.id == stackState.id } as? LauncherItem.WidgetStackItem ?: stackState
+            WidgetStackModalDialog(
+                stack = currentStack,
+                onDismiss = { activeStackForEditing = null },
+                onAddWidgetToStack = {
+                    onAddWidgetToStack(currentStack.id)
+                },
+                onRemoveWidgetFromStack = { widgetId ->
+                    viewModel.removeWidgetFromStack(currentStack, widgetId)
+                },
+                onDeleteStack = {
+                    viewModel.deleteItem(currentStack.id)
+                    activeStackForEditing = null
                 }
             )
         }

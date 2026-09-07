@@ -13,6 +13,7 @@ interface LauncherRepository {
     suspend fun moveItem(itemId: Long, pageIndex: Int, cellX: Int, cellY: Int)
     suspend fun deleteItem(itemId: Long)
     suspend fun updateFolder(folderId: Long, newTitle: String, items: List<LauncherItem.AppItem>)
+    suspend fun updateWidgetStack(stackId: Long, widgets: List<LauncherItem.WidgetItem>)
     suspend fun addPage(pageIndex: Int, isHomePage: Boolean): Long
     suspend fun deletePage(pageIndex: Int)
 }
