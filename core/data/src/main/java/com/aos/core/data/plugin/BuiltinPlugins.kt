@@ -1,4 +1,4 @@
-﻿package com.aos.core.data.plugin
+package com.aos.core.data.plugin
 
 import com.aos.core.domain.model.ActionPlugin
 import com.aos.core.domain.model.PluginManifest

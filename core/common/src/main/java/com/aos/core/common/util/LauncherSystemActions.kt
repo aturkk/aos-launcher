@@ -1,4 +1,4 @@
-﻿package com.aos.core.common.util
+package com.aos.core.common.util
 
 import android.accessibilityservice.AccessibilityService
 import android.annotation.SuppressLint

@@ -1,4 +1,4 @@
-﻿package com.aos.core.data.crypto
+package com.aos.core.data.crypto
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals

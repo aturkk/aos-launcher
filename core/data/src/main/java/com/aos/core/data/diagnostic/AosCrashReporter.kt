@@ -1,4 +1,4 @@
-﻿package com.aos.core.data.diagnostic
+package com.aos.core.data.diagnostic
 
 import android.content.Context
 import android.os.Build

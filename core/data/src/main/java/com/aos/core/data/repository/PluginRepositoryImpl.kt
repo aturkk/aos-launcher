@@ -1,4 +1,4 @@
-﻿package com.aos.core.data.repository
+package com.aos.core.data.repository
 
 import com.aos.core.data.plugin.DuckDuckGoSearchPlugin
 import com.aos.core.data.plugin.PluginSecuritySandbox

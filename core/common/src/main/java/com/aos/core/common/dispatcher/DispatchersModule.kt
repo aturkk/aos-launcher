@@ -1,4 +1,4 @@
-﻿package com.aos.core.common.dispatcher
+package com.aos.core.common.dispatcher
 
 import dagger.Module
 import dagger.Provides

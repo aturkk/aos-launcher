@@ -1,4 +1,4 @@
-﻿# R8 / Proguard Rules for AOS Launcher (Production Optimization)
+# R8 / Proguard Rules for AOS Launcher (Production Optimization)
 
 # Kotlinx Serialization
 -keepattributes *Annotation*, InnerClasses

@@ -124,8 +124,9 @@ class UserPreferencesDataStore @Inject constructor(
             preferences[PreferencesKeys.PARALLAX_ENABLED] = config.isParallaxEnabled
             preferences[PreferencesKeys.SHOW_NOTIFICATION_BADGES] = config.showNotificationBadges
             preferences[PreferencesKeys.SEARCH_ENGINE] = config.searchEngine.name
-            if (config.selectedIconPackPackage != null) {
-                preferences[PreferencesKeys.ICON_PACK] = config.selectedIconPackPackage
+            val iconPack = config.selectedIconPackPackage
+            if (iconPack != null) {
+                preferences[PreferencesKeys.ICON_PACK] = iconPack
             } else {
                 preferences.remove(PreferencesKeys.ICON_PACK)
             }

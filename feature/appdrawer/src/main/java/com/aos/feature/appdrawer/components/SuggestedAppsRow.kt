@@ -1,4 +1,4 @@
-﻿package com.aos.feature.appdrawer.components
+package com.aos.feature.appdrawer.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border

@@ -1,4 +1,4 @@
-﻿package com.aos.core.domain.model
+package com.aos.core.domain.model
 
 enum class ProfileType {
     Normal,

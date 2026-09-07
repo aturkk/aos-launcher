@@ -1,4 +1,4 @@
-﻿package com.aos.core.data.iconpack
+package com.aos.core.data.iconpack
 
 import android.content.Context
 import android.content.Intent

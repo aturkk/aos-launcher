@@ -1,4 +1,4 @@
-﻿package com.aos.launcher.service
+package com.aos.launcher.service
 
 import android.accessibilityservice.AccessibilityService
 import android.view.accessibility.AccessibilityEvent

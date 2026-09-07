@@ -1,4 +1,4 @@
-﻿package com.aos.core.ui.components
+package com.aos.core.ui.components
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -31,6 +31,7 @@ import com.aos.core.ui.theme.SquircleShape
 fun AosAppIcon(
     label: String,
     packageName: String = "",
+    activityName: String = "",
     iconUri: String? = null,
     shape: Shape = SquircleShape,
     showLabel: Boolean = true,

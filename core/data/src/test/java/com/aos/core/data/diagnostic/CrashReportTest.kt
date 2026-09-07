@@ -1,4 +1,4 @@
-﻿package com.aos.core.data.diagnostic
+package com.aos.core.data.diagnostic
 
 import com.aos.core.domain.model.CrashReport
 import kotlinx.serialization.encodeToString

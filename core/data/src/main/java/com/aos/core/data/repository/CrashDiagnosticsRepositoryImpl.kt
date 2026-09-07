@@ -1,4 +1,4 @@
-﻿package com.aos.core.data.repository
+package com.aos.core.data.repository
 
 import com.aos.core.data.diagnostic.AosCrashReporter
 import com.aos.core.domain.model.CrashReport

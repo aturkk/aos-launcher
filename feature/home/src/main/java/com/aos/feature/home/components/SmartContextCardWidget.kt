@@ -1,4 +1,4 @@
-﻿package com.aos.feature.home.components
+package com.aos.feature.home.components
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn

@@ -1,4 +1,4 @@
-﻿package com.aos.core.domain.repository
+package com.aos.core.domain.repository
 
 import com.aos.core.domain.model.AppSuggestion
 import kotlinx.coroutines.flow.Flow

@@ -1,4 +1,4 @@
-﻿package com.aos.launcher.ui.onboarding
+package com.aos.launcher.ui.onboarding
 
 import android.app.role.RoleManager
 import android.content.Context

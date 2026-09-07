@@ -1,4 +1,4 @@
-﻿package com.aos.core.ui.animation
+package com.aos.core.ui.animation
 
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.TransformOrigin

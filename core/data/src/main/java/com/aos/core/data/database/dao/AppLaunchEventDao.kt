@@ -1,4 +1,4 @@
-﻿package com.aos.core.data.database.dao
+package com.aos.core.data.database.dao
 
 import androidx.room.Dao
 import androidx.room.Insert

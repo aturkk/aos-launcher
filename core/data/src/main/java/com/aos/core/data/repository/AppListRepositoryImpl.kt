@@ -1,4 +1,4 @@
-﻿package com.aos.core.data.repository
+package com.aos.core.data.repository
 
 import android.content.Context
 import android.content.Intent

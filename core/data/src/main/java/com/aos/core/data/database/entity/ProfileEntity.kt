@@ -1,4 +1,4 @@
-﻿package com.aos.core.data.database.entity
+package com.aos.core.data.database.entity
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey

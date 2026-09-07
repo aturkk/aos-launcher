@@ -1,4 +1,4 @@
-﻿package com.aos.feature.home.components
+package com.aos.feature.home.components
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween

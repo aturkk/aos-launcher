@@ -1,4 +1,4 @@
-﻿package com.aos.core.domain.model
+package com.aos.core.domain.model
 
 data class PageInfo(
     val pageId: Long = 0L,

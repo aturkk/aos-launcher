@@ -1,4 +1,4 @@
-﻿package com.aos.core.data.crypto
+package com.aos.core.data.crypto
 
 import java.nio.ByteBuffer
 import java.security.SecureRandom

@@ -1,4 +1,4 @@
-﻿package com.aos.core.data.ai
+package com.aos.core.data.ai
 
 import com.aos.core.data.preferences.UserPreferencesDataStore
 import com.aos.core.domain.model.ProfileType

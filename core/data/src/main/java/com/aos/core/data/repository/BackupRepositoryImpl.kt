@@ -1,4 +1,4 @@
-﻿package com.aos.core.data.repository
+package com.aos.core.data.repository
 
 import android.os.Build
 import com.aos.core.common.dispatcher.AosDispatchers
@@ -24,7 +24,7 @@ import com.aos.core.domain.model.ProfileType
 import com.aos.core.domain.model.SearchEngineOption
 import com.aos.core.domain.model.SyncStatus
 import com.aos.core.domain.model.ThemeConfig
-import com.aos.core.domain.model.UserPreferences
+import com.aos.core.domain.repository.UserPreferences
 import com.aos.core.domain.repository.BackupRepository
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow

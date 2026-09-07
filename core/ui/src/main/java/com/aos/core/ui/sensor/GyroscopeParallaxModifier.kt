@@ -1,4 +1,4 @@
-﻿package com.aos.core.ui.sensor
+package com.aos.core.ui.sensor
 
 import android.content.Context
 import android.hardware.Sensor

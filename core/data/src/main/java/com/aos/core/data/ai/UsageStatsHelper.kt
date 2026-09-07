@@ -1,4 +1,4 @@
-﻿package com.aos.core.data.ai
+package com.aos.core.data.ai
 
 import android.app.AppOpsManager
 import android.app.usage.UsageStatsManager

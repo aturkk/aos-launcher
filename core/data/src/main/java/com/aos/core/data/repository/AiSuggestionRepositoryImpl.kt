@@ -1,4 +1,4 @@
-﻿package com.aos.core.data.repository
+package com.aos.core.data.repository
 
 import com.aos.core.common.result.Result
 import com.aos.core.data.ai.OnDeviceSuggestionEngine
@@ -42,7 +42,7 @@ class AiSuggestionRepositoryImpl @Inject constructor(
         }.flowOn(Dispatchers.IO)
     }
 
-    override suspend fun recordAppLaunch(packageName: String) = withContext(Dispatchers.IO) {
+    override suspend fun recordAppLaunch(packageName: String): Unit = withContext(Dispatchers.IO) {
         val calendar = Calendar.getInstance()
         val event = AppLaunchEventEntity(
             packageName = packageName,

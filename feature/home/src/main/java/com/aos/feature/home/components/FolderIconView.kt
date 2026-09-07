@@ -1,4 +1,4 @@
-﻿package com.aos.feature.home.components
+package com.aos.feature.home.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable

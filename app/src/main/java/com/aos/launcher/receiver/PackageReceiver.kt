@@ -1,4 +1,4 @@
-﻿package com.aos.launcher.receiver
+package com.aos.launcher.receiver
 
 import android.content.BroadcastReceiver
 import android.content.Context

@@ -1,4 +1,4 @@
-﻿package com.aos.feature.settings.components
+package com.aos.feature.settings.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border

@@ -1,4 +1,4 @@
-﻿package com.aos.feature.settings.components
+package com.aos.feature.settings.components
 
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
@@ -269,7 +269,7 @@ fun BackupSyncSection(
                                     Toast.LENGTH_LONG
                                 ).show()
                             } else if (result is Result.Error) {
-                                Toast.makeText(context, "Hata: ${result.exception.localizedMessage}", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "Hata: ${result.exception?.localizedMessage ?: result.message ?: "Bilinmeyen hata"}", Toast.LENGTH_SHORT).show()
                             }
                         }
                     },
@@ -345,7 +345,7 @@ fun BackupSyncSection(
                                 if (result is Result.Success) {
                                     Toast.makeText(context, "Yedek başarıyla geri yüklendi!", Toast.LENGTH_LONG).show()
                                 } else if (result is Result.Error) {
-                                    Toast.makeText(context, "Geri yükleme başarısız: ${result.exception.localizedMessage}", Toast.LENGTH_LONG).show()
+                                    Toast.makeText(context, "Geri yükleme başarısız: ${result.exception?.localizedMessage ?: result.message ?: "Bilinmeyen hata"}", Toast.LENGTH_LONG).show()
                                 }
                             } catch (e: Exception) {
                                 isLoading = false

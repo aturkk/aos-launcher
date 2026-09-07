@@ -1,4 +1,4 @@
-﻿package com.aos.core.ui.theme
+package com.aos.core.ui.theme
 
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape

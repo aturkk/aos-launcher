@@ -1,4 +1,4 @@
-﻿package com.aos.core.ui.gesture
+package com.aos.core.ui.gesture
 
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures

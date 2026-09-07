@@ -1,4 +1,4 @@
-﻿package com.aos.feature.home.components
+package com.aos.feature.home.components
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete

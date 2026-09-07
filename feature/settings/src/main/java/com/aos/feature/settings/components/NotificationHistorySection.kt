@@ -1,4 +1,4 @@
-﻿package com.aos.feature.settings.components
+package com.aos.feature.settings.components
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background

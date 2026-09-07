@@ -1,4 +1,4 @@
-﻿package com.aos.core.ui.components
+package com.aos.core.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable

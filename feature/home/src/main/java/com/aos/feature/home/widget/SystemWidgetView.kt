@@ -1,4 +1,4 @@
-﻿package com.aos.feature.home.widget
+package com.aos.feature.home.widget
 
 import android.appwidget.AppWidgetManager
 import androidx.compose.foundation.layout.Box
