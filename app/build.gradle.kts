@@ -14,8 +14,8 @@ android {
         applicationId = "com.aos.launcher"
         minSdk = 26
         targetSdk = 35
-        versionCode = 5
-        versionName = "1.4.4"
+        versionCode = 6
+        versionName = "1.5.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

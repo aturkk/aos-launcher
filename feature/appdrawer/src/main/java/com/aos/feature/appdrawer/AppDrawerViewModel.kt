@@ -55,7 +55,8 @@ class AppDrawerViewModel @Inject constructor(
                     current.copy(
                         mathCalculatorEnabled = prefs.themeConfig.enableMathCalculator,
                         contactsSearchEnabled = prefs.themeConfig.enableContactsSearch,
-                        aiSearchChipsEnabled = prefs.themeConfig.enableAiSearchChips
+                        aiSearchChipsEnabled = prefs.themeConfig.enableAiSearchChips,
+                        searchBarAtBottom = prefs.themeConfig.searchBarAtBottom
                     )
                 }
             }

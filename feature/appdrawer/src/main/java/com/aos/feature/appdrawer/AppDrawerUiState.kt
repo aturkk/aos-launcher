@@ -20,5 +20,6 @@ data class AppDrawerUiState(
     val contactResults: List<DeviceContact> = emptyList(),
     val mathCalculatorEnabled: Boolean = true,
     val contactsSearchEnabled: Boolean = true,
-    val aiSearchChipsEnabled: Boolean = true
+    val aiSearchChipsEnabled: Boolean = true,
+    val searchBarAtBottom: Boolean = false
 )

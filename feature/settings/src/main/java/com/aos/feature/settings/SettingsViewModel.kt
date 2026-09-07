@@ -256,6 +256,36 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun setWidgetPageEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            userPreferencesRepository.setWidgetPageEnabled(enabled)
+        }
+    }
+
+    fun setHomeLayoutMode(mode: com.aos.core.domain.model.HomeLayoutMode) {
+        viewModelScope.launch {
+            userPreferencesRepository.setHomeLayoutMode(mode)
+        }
+    }
+
+    fun setSearchBarAtBottom(atBottom: Boolean) {
+        viewModelScope.launch {
+            userPreferencesRepository.setSearchBarAtBottom(atBottom)
+        }
+    }
+
+    fun setClockWidgetEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            userPreferencesRepository.setClockWidgetEnabled(enabled)
+        }
+    }
+
+    fun setSmartContextCardEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            userPreferencesRepository.setSmartContextCardEnabled(enabled)
+        }
+    }
+
     suspend fun exportBackup(password: String): Result<ByteArray> {
         return backupRepository.exportEncryptedBackup(password)
     }

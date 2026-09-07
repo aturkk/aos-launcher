@@ -9,6 +9,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.awaitLongPressOrCancellation
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.drag
 import androidx.compose.foundation.layout.Box
@@ -23,6 +24,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -105,41 +107,59 @@ fun GridCellLayout(
 
         val cellWidthPx = with(density) { cellWidth.toPx() }
         val cellHeightPx = with(density) { cellHeight.toPx() }
+        val maxWidthPx = with(density) { maxWidth.toPx() }
+        val maxHeightPx = with(density) { maxHeight.toPx() }
+        val deleteThresholdPx = with(density) { 110.dp.toPx() }
 
         var draggedItemId by remember { mutableStateOf<Long?>(null) }
         var dragOffset by remember { mutableStateOf(Offset.Zero) }
 
-        // Drop zone at the top when dragging
+        // For pending app placement from app drawer: free-form drag
+        var placementPointerOffset by remember(pendingPlacedApp) { mutableStateOf<Offset?>(null) }
+
+        // Drop zone at the top when dragging or placing pending app
         AnimatedVisibility(
-            visible = draggedItemId != null,
+            visible = draggedItemId != null || pendingPlacedApp != null,
             enter = fadeIn(),
             exit = fadeOut(),
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .padding(top = 4.dp)
-                .zIndex(30f)
+                .zIndex(45f)
         ) {
+            val isHoveringDelete = (draggedItemId != null && (dragOffset.y + with(density) { 60.dp.toPx() } < deleteThresholdPx)) ||
+                (placementPointerOffset?.let { it.y < deleteThresholdPx } == true)
+
+            val dropBgColor = if (isHoveringDelete) Color(0xFFFF1744) else Color(0xFFD32F2F).copy(alpha = 0.92f)
+            val dropScale = if (isHoveringDelete) 1.08f else 1f
+
             Surface(
                 shape = RoundedCornerShape(20.dp),
-                color = Color(0xFFD32F2F).copy(alpha = 0.92f),
+                color = dropBgColor,
                 shadowElevation = 8.dp,
-                modifier = Modifier.padding(4.dp)
+                modifier = Modifier
+                    .padding(4.dp)
+                    .graphicsLayer {
+                        scaleX = dropScale
+                        scaleY = dropScale
+                    }
             ) {
                 Row(
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Delete,
+                        imageVector = if (pendingPlacedApp != null) Icons.Default.Close else Icons.Default.Delete,
                         contentDescription = null,
                         tint = Color.White,
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Kaldırmak için buraya bırakın",
+                        text = if (pendingPlacedApp != null) "İptal etmek için buraya bırakın" else "Kaldırmak için buraya bırakın",
                         color = Color.White,
-                        style = MaterialTheme.typography.labelMedium
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold
                     )
                 }
             }
@@ -208,7 +228,7 @@ fun GridCellLayout(
                                                 val totalOffsetX = with(density) { baseOffsetX.toPx() } + dragOffset.x
                                                 val totalOffsetY = with(density) { baseOffsetY.toPx() } + dragOffset.y
 
-                                                if (totalOffsetY < 90f) {
+                                                if (totalOffsetY < deleteThresholdPx) {
                                                     onRemoveItem(item.id)
                                                 } else {
                                                     val targetCellX = (totalOffsetX / cellWidthPx).toInt().coerceIn(0, columns - 1)
@@ -252,12 +272,20 @@ fun GridCellLayout(
                             Box(
                                 modifier = Modifier
                                     .align(Alignment.TopEnd)
-                                    .padding(top = 4.dp, end = 6.dp)
-                                    .size(16.dp)
+                                    .padding(top = 2.dp, end = 2.dp)
+                                    .size(24.dp)
                                     .clip(CircleShape)
-                                    .background(Color.White.copy(alpha = 0.65f))
-                                    .border(1.dp, Color.Black.copy(alpha = 0.35f), CircleShape)
-                            )
+                                    .background(Color(0xFFE53935))
+                                    .clickable { onRemoveItem(item.id) },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = "Kaldır",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                            }
                         }
                     }
                 }
@@ -300,7 +328,7 @@ fun GridCellLayout(
                                                 val totalOffsetX = with(density) { baseOffsetX.toPx() } + dragOffset.x
                                                 val totalOffsetY = with(density) { baseOffsetY.toPx() } + dragOffset.y
 
-                                                if (totalOffsetY < 90f) {
+                                                if (totalOffsetY < deleteThresholdPx) {
                                                     onRemoveItem(item.id)
                                                 } else {
                                                     val targetCellX = (totalOffsetX / cellWidthPx).toInt().coerceIn(0, columns - 1)
@@ -334,12 +362,20 @@ fun GridCellLayout(
                             Box(
                                 modifier = Modifier
                                     .align(Alignment.TopEnd)
-                                    .padding(top = 4.dp, end = 6.dp)
-                                    .size(16.dp)
+                                    .padding(top = 2.dp, end = 2.dp)
+                                    .size(24.dp)
                                     .clip(CircleShape)
-                                    .background(Color.White.copy(alpha = 0.65f))
-                                    .border(1.dp, Color.Black.copy(alpha = 0.35f), CircleShape)
-                            )
+                                    .background(Color(0xFFE53935))
+                                    .clickable { onRemoveItem(item.id) },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = "Kaldır",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                            }
                         }
                     }
                 }
@@ -349,53 +385,15 @@ fun GridCellLayout(
                         modifier = itemModifier
                             .size(width = cellWidth * item.spanX, height = cellHeight * item.spanY)
                             .clip(RoundedCornerShape(16.dp))
-                            .pointerInput(item.id) {
-                                awaitEachGesture {
-                                    val down = awaitFirstDown(requireUnconsumed = false)
-                                    val longPress = awaitLongPressOrCancellation(down.id)
-                                    if (longPress != null) {
-                                        // Long press -> Drag widget
-                                        draggedItemId = item.id
-                                        dragOffset = Offset.Zero
-                                        var isDragCompleted = false
-                                        try {
-                                            drag(longPress.id) { change ->
-                                                change.consume()
-                                                dragOffset += change.positionChange()
-                                            }
-                                            isDragCompleted = true
-                                        } finally {
-                                            if (isDragCompleted) {
-                                                val totalOffsetX = with(density) { baseOffsetX.toPx() } + dragOffset.x
-                                                val totalOffsetY = with(density) { baseOffsetY.toPx() } + dragOffset.y
-
-                                                if (totalOffsetY < 90f) {
-                                                    onRemoveItem(item.id)
-                                                } else {
-                                                    val targetCellX = (totalOffsetX / cellWidthPx).toInt().coerceIn(0, columns - item.spanX)
-                                                    val targetCellY = (totalOffsetY / cellHeightPx).toInt().coerceIn(0, rows - item.spanY)
-
-                                                    val isOccupied = items.any {
-                                                        it.id != item.id &&
-                                                        it.cellX < (targetCellX + item.spanX) && (it.cellX + it.spanX) > targetCellX &&
-                                                        it.cellY < (targetCellY + item.spanY) && (it.cellY + it.spanY) > targetCellY
-                                                    }
-                                                    if (!isOccupied) {
-                                                        onMoveItem(item.id, targetCellX, targetCellY)
-                                                    }
-                                                }
-                                            }
-                                            draggedItemId = null
-                                            dragOffset = Offset.Zero
-                                        }
-                                    }
-                                }
-                            }
                     ) {
                         if (widgetHost != null && item.appWidgetId != -1) {
                             SystemWidgetView(
                                 appWidgetId = item.appWidgetId,
                                 widgetHost = widgetHost,
+                                onLongClick = {
+                                    draggedItemId = item.id
+                                    dragOffset = Offset.Zero
+                                },
                                 modifier = Modifier.fillMaxSize()
                             )
                         } else {
@@ -410,15 +408,68 @@ fun GridCellLayout(
                         }
 
                         if (isEditMode) {
+                            // Transparent drag layer in edit mode to avoid native view touch stealing
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .pointerInput(item.id) {
+                                        detectDragGestures(
+                                            onDragStart = {
+                                                draggedItemId = item.id
+                                                dragOffset = Offset.Zero
+                                            },
+                                            onDrag = { change, dragAmount ->
+                                                change.consume()
+                                                dragOffset += dragAmount
+                                            },
+                                            onDragEnd = {
+                                                val totalOffsetX = with(density) { baseOffsetX.toPx() } + dragOffset.x
+                                                val totalOffsetY = with(density) { baseOffsetY.toPx() } + dragOffset.y
+
+                                                if (totalOffsetY < deleteThresholdPx) {
+                                                    onRemoveItem(item.id)
+                                                } else {
+                                                    val targetCellX = (totalOffsetX / cellWidthPx).toInt().coerceIn(0, columns - item.spanX)
+                                                    val targetCellY = (totalOffsetY / cellHeightPx).toInt().coerceIn(0, rows - item.spanY)
+
+                                                    val isOccupied = items.any {
+                                                        it.id != item.id &&
+                                                        it.cellX < (targetCellX + item.spanX) && (it.cellX + it.spanX) > targetCellX &&
+                                                        it.cellY < (targetCellY + item.spanY) && (it.cellY + it.spanY) > targetCellY
+                                                    }
+                                                    if (!isOccupied) {
+                                                        onMoveItem(item.id, targetCellX, targetCellY)
+                                                    }
+                                                }
+                                                draggedItemId = null
+                                                dragOffset = Offset.Zero
+                                            },
+                                            onDragCancel = {
+                                                draggedItemId = null
+                                                dragOffset = Offset.Zero
+                                            }
+                                        )
+                                    }
+                            )
+
+                            // Red circular delete button on top-right
                             Box(
                                 modifier = Modifier
                                     .align(Alignment.TopEnd)
-                                    .padding(top = 6.dp, end = 6.dp)
-                                    .size(18.dp)
+                                    .padding(top = 4.dp, end = 4.dp)
+                                    .size(24.dp)
                                     .clip(CircleShape)
-                                    .background(Color.White.copy(alpha = 0.65f))
-                                    .border(1.dp, Color.Black.copy(alpha = 0.35f), CircleShape)
-                            )
+                                    .background(Color(0xFFE53935))
+                                    .clickable { onRemoveItem(item.id) },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = "Widgetı Kaldır",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                            }
                         }
                     }
                 }
@@ -427,33 +478,91 @@ fun GridCellLayout(
             }
         }
 
-        // Empty cells drop targets when placing pending app from App Drawer
+        // Free-form Drag & Drop placement for pending app from App Drawer (NO static + Yerleştir buttons)
         if (pendingPlacedApp != null) {
-            for (r in 0 until rows) {
-                for (c in 0 until columns) {
-                    val isOccupied = items.any { it.cellX == c && it.cellY == r }
-                    if (!isOccupied) {
-                        Box(
-                            modifier = Modifier
-                                .offset(x = cellWidth * c, y = cellHeight * r)
-                                .size(cellWidth, cellHeight)
-                                .padding(4.dp)
-                                .clip(RoundedCornerShape(16.dp))
-                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.22f))
-                                .border(1.5.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(16.dp))
-                                .clickable {
-                                    onPlacePendingApp(pendingPlacedApp, c, r)
-                                },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "+ Yerleştir",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = Color.White,
-                                fontWeight = FontWeight.Bold
-                            )
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .zIndex(35f)
+                    .pointerInput(pendingPlacedApp) {
+                        detectTapGestures { tapOffset ->
+                            if (tapOffset.y >= deleteThresholdPx) {
+                                val targetCellX = (tapOffset.x / cellWidthPx).toInt().coerceIn(0, columns - 1)
+                                val targetCellY = (tapOffset.y / cellHeightPx).toInt().coerceIn(0, rows - 1)
+                                onPlacePendingApp(pendingPlacedApp, targetCellX, targetCellY)
+                            }
                         }
                     }
+                    .pointerInput(pendingPlacedApp) {
+                        detectDragGestures(
+                            onDragStart = { startOffset ->
+                                placementPointerOffset = startOffset
+                            },
+                            onDrag = { change, dragAmount ->
+                                change.consume()
+                                val current = placementPointerOffset ?: change.position
+                                placementPointerOffset = current + dragAmount
+                            },
+                            onDragEnd = {
+                                val offset = placementPointerOffset
+                                if (offset != null) {
+                                    if (offset.y < deleteThresholdPx) {
+                                        // Dropped on cancel drop zone
+                                    } else {
+                                        val targetCellX = (offset.x / cellWidthPx).toInt().coerceIn(0, columns - 1)
+                                        val targetCellY = (offset.y / cellHeightPx).toInt().coerceIn(0, rows - 1)
+                                        onPlacePendingApp(pendingPlacedApp, targetCellX, targetCellY)
+                                    }
+                                }
+                                placementPointerOffset = null
+                            },
+                            onDragCancel = {
+                                placementPointerOffset = null
+                            }
+                        )
+                    }
+            ) {
+                // Active snap cell glow preview
+                val activeOffset = placementPointerOffset
+                if (activeOffset != null && activeOffset.y >= deleteThresholdPx) {
+                    val hoverCellX = (activeOffset.x / cellWidthPx).toInt().coerceIn(0, columns - 1)
+                    val hoverCellY = (activeOffset.y / cellHeightPx).toInt().coerceIn(0, rows - 1)
+                    Box(
+                        modifier = Modifier
+                            .offset(x = cellWidth * hoverCellX, y = cellHeight * hoverCellY)
+                            .size(cellWidth, cellHeight)
+                            .padding(6.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.20f))
+                            .border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(16.dp))
+                    )
+                }
+
+                // Floating App Icon under finger
+                val floatPos = placementPointerOffset ?: Offset(maxWidthPx / 2f, maxHeightPx / 2f)
+                Box(
+                    modifier = Modifier
+                        .offset {
+                            IntOffset(
+                                x = (floatPos.x - with(density) { 36.dp.toPx() }).roundToInt(),
+                                y = (floatPos.y - with(density) { 36.dp.toPx() }).roundToInt()
+                            )
+                        }
+                        .size(72.dp)
+                        .graphicsLayer {
+                            scaleX = 1.18f
+                            scaleY = 1.18f
+                            shadowElevation = 24f
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    AosAppIcon(
+                        label = pendingPlacedApp.label,
+                        packageName = pendingPlacedApp.packageName,
+                        activityName = pendingPlacedApp.activityName,
+                        shape = iconShape,
+                        showLabel = showLabels
+                    )
                 }
             }
         }

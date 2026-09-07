@@ -265,7 +265,7 @@ class LauncherActivity : ComponentActivity() {
                     AnimatedVisibility(
                         visible = isAppDrawerOpen,
                         enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
-                        exit = slideOutVertically(targetOffsetY = { it }) + fadeOut()
+                        exit = if (pendingPlacedApp != null) fadeOut(animationSpec = androidx.compose.animation.core.snap()) else slideOutVertically(targetOffsetY = { it }) + fadeOut()
                     ) {
                         AppDrawerScreen(
                             viewModel = appDrawerViewModel,

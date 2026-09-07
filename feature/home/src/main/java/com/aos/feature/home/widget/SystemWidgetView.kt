@@ -16,7 +16,8 @@ import androidx.compose.ui.viewinterop.AndroidView
 fun SystemWidgetView(
     appWidgetId: Int,
     widgetHost: LauncherWidgetHost,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onLongClick: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val appWidgetManager = remember { AppWidgetManager.getInstance(context) }
@@ -25,7 +26,26 @@ fun SystemWidgetView(
     if (appWidgetInfo != null) {
         AndroidView(
             factory = {
-                widgetHost.createView(context, appWidgetId, appWidgetInfo)
+                val hostView = widgetHost.createView(context, appWidgetId, appWidgetInfo)
+                if (hostView is LauncherAppWidgetHostView) {
+                    hostView.onLongClickAction = onLongClick
+                } else {
+                    hostView.setOnLongClickListener {
+                        onLongClick?.invoke()
+                        true
+                    }
+                }
+                hostView
+            },
+            update = { hostView ->
+                if (hostView is LauncherAppWidgetHostView) {
+                    hostView.onLongClickAction = onLongClick
+                } else {
+                    hostView.setOnLongClickListener {
+                        onLongClick?.invoke()
+                        true
+                    }
+                }
             },
             modifier = modifier.fillMaxSize()
         )

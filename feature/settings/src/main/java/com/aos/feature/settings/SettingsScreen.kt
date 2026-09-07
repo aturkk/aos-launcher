@@ -156,7 +156,13 @@ fun SettingsScreen(
                                 onGridSizeChange = { cols, rows -> viewModel.setGridDimensions(rows = rows, cols = cols) },
                                 onShowLabelsChange = viewModel::setShowAppLabels,
                                 onDoubleTapSleepChange = viewModel::setDoubleTapToSleep,
-                                onNotificationBadgesChange = viewModel::setShowNotificationBadges
+                                onNotificationBadgesChange = viewModel::setShowNotificationBadges,
+                                onHomeLayoutModeChange = viewModel::setHomeLayoutMode,
+                                onWidgetPageChange = viewModel::setWidgetPageEnabled,
+                                onNewsFeedChange = viewModel::setNewsFeedEnabled,
+                                onSearchBarBottomChange = viewModel::setSearchBarAtBottom,
+                                onClockWidgetChange = viewModel::setClockWidgetEnabled,
+                                onSmartContextCardChange = viewModel::setSmartContextCardEnabled
                             )
                         }
 
@@ -169,20 +175,34 @@ fun SettingsScreen(
                                 )
                                 Spacer(modifier = Modifier.height(6.dp))
                                 Text(
-                                    text = "Akıllı kategori çubuğu ve alfabetik hızlı kaydırma seçenekleri.",
+                                    text = "Smart Launcher dikey sol kategori çubuğu ve alfabetik hızlı kaydırma.",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = Color.Gray
                                 )
                                 Spacer(modifier = Modifier.height(16.dp))
                                 Text(
-                                    text = "• Otomatik Kategorilendirme: Uygulamalar İletişim, Medya, Oyunlar, Üretkenlik, Araçlar olarak otomatik gruplanır.",
+                                    text = "• Dikey Kategori Çubuğu: Sol kenardaki simgelerle (Tümü, İletişim, Medya, Oyunlar, Üretkenlik, Araçlar) anında filtreleyin.",
                                     style = MaterialTheme.typography.bodyMedium
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(
-                                    text = "• Hızlı A..Z Gezinme: Çekmecenin sağ kenarındaki alfabetik çubuktan harflere dokunarak zıplayabilirsiniz.",
+                                    text = "• Hızlı A..Z Gezinme: Sağ kenardaki alfabetik çubuktan harflere dokunarak zıplayabilirsiniz.",
                                     style = MaterialTheme.typography.bodyMedium
                                 )
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text("Arama Çubuğu Altta (Tek Elle Kullanım)", style = MaterialTheme.typography.bodyLarge)
+                                        Text("Arama çubuğunu başparmak erişimi için çekmecenin altına yerleştirir", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                                    }
+                                    androidx.compose.material3.Switch(
+                                        checked = prefs.themeConfig.searchBarAtBottom,
+                                        onCheckedChange = viewModel::setSearchBarAtBottom
+                                    )
+                                }
                             }
                         }
 

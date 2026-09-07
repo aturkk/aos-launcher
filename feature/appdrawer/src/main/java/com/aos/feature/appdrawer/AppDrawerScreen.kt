@@ -43,6 +43,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -87,165 +88,210 @@ fun AppDrawerScreen(
             .sorted()
     }
 
+    val categoryCounts = remember(uiState.filteredApps) {
+        uiState.filteredApps.groupBy { it.category }.mapValues { it.value.size }
+    }
+
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.88f))
+            .background(Color.Black.copy(alpha = 0.90f))
             .statusBarsPadding()
             .navigationBarsPadding()
     ) {
-        Column(
-            modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp)
-        ) {
-            Spacer(modifier = Modifier.height(16.dp))
+        Row(modifier = Modifier.fillMaxSize()) {
+            // Smart Launcher Signature Left Vertical Category Rail (visible when not searching)
+            if (uiState.searchQuery.isBlank()) {
+                com.aos.feature.appdrawer.components.VerticalCategoryRail(
+                    selectedCategory = selectedCategory,
+                    onSelectCategory = { selectedCategory = it },
+                    categoryCounts = categoryCounts
+                )
+            }
 
-            // Search Bar
-            OutlinedTextField(
-                value = uiState.searchQuery,
-                onValueChange = viewModel::onSearchQueryChanged,
-                modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text("Uygulama ara...", color = Color.Gray) },
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.Search,
-                        contentDescription = "Ara",
-                        tint = Color.White
-                    )
-                },
-                trailingIcon = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(onClick = onOpenSettings) {
+            // Main Content Area
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .padding(horizontal = 8.dp)
+            ) {
+                // Search Bar Composable definition
+                val searchBarContent = @Composable {
+                    OutlinedTextField(
+                        value = uiState.searchQuery,
+                        onValueChange = viewModel::onSearchQueryChanged,
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = { Text("Uygulama ara...", color = Color.Gray) },
+                        leadingIcon = {
                             Icon(
-                                imageVector = Icons.Default.Settings,
-                                contentDescription = "Başlatıcı Ayarları",
-                                tint = Color.White.copy(alpha = 0.85f)
-                            )
-                        }
-                        IconButton(onClick = { isVaultOpen = true }) {
-                            Icon(
-                                imageVector = if (uiState.isVaultUnlocked) Icons.Default.LockOpen else Icons.Default.Lock,
-                                contentDescription = "Gizli Kasa",
-                                tint = if (uiState.hiddenApps.isNotEmpty()) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.7f)
-                            )
-                        }
-                        IconButton(onClick = onClose) {
-                            Icon(
-                                imageVector = Icons.Default.Close,
-                                contentDescription = "Kapat",
+                                imageVector = Icons.Default.Search,
+                                contentDescription = "Ara",
                                 tint = Color.White
                             )
-                        }
-                    }
-                },
-                singleLine = true,
-                shape = MaterialTheme.shapes.extraLarge,
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = Color.White.copy(alpha = 0.15f),
-                    unfocusedContainerColor = Color.White.copy(alpha = 0.1f),
-                    focusedTextColor = Color.White,
-                    unfocusedTextColor = Color.White
-                )
-            )
-
-            uiState.activeProfile?.let { prof ->
-                if (prof.type != ProfileType.Normal) {
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text(
-                        text = "Aktif Mod: ${prof.name} (Filtrelenmiş Liste)",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(horizontal = 8.dp)
+                        },
+                        trailingIcon = {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                IconButton(onClick = onOpenSettings) {
+                                    Icon(
+                                        imageVector = Icons.Default.Settings,
+                                        contentDescription = "Başlatıcı Ayarları",
+                                        tint = Color.White.copy(alpha = 0.85f)
+                                    )
+                                }
+                                IconButton(onClick = { isVaultOpen = true }) {
+                                    Icon(
+                                        imageVector = if (uiState.isVaultUnlocked) Icons.Default.LockOpen else Icons.Default.Lock,
+                                        contentDescription = "Gizli Kasa",
+                                        tint = if (uiState.hiddenApps.isNotEmpty()) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.7f)
+                                    )
+                                }
+                                IconButton(onClick = onClose) {
+                                    Icon(
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = "Kapat",
+                                        tint = Color.White
+                                    )
+                                }
+                            }
+                        },
+                        singleLine = true,
+                        shape = MaterialTheme.shapes.extraLarge,
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = Color.White.copy(alpha = 0.15f),
+                            unfocusedContainerColor = Color.White.copy(alpha = 0.1f),
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White
+                        )
                     )
                 }
-            }
 
-            // Universal Smart Search Results (Math, Contacts, Web & AI Chips)
-            com.aos.feature.appdrawer.components.SmartSearchResults(
-                searchQuery = uiState.searchQuery,
-                mathResult = uiState.mathResult,
-                contactResults = uiState.contactResults,
-                aiChipsEnabled = uiState.aiSearchChipsEnabled
-            )
-
-            // AI Suggested Apps Shelf
-            if (uiState.suggestedApps.isNotEmpty() && uiState.searchQuery.isBlank()) {
-                Spacer(modifier = Modifier.height(8.dp))
-                SuggestedAppsRow(
-                    suggestions = uiState.suggestedApps,
-                    onAppClick = onAppClick
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-            }
-
-            // Smart Category Filter Bar (visible when not searching)
-            if (uiState.searchQuery.isBlank()) {
-                com.aos.feature.appdrawer.components.CategoryFilterBar(
-                    selectedCategory = selectedCategory,
-                    onSelectCategory = { selectedCategory = it }
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-            }
-
-            // Main Apps Grid with Side Alphabet Bar
-            if (uiState.isLoading) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                // Top Search Bar (if not configured at bottom)
+                if (!uiState.searchBarAtBottom) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    searchBarContent()
+                    Spacer(modifier = Modifier.height(8.dp))
                 }
-            } else {
-                Row(modifier = Modifier.fillMaxSize()) {
-                    LazyVerticalGrid(
-                        state = gridState,
-                        columns = GridCells.Fixed(4),
-                        contentPadding = PaddingValues(vertical = 8.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        itemsIndexed(
-                            items = displayedApps,
-                            key = { _, app -> app.packageName + app.activityName }
-                        ) { _, app ->
-                            AosAppIcon(
-                                label = app.label,
-                                packageName = app.packageName,
-                                activityName = app.activityName,
-                                onClick = { onAppClick(app.packageName, app.activityName) },
-                                onLongClick = { onStartPlaceApp(app) }
-                            )
-                        }
-                    }
 
-                    // A..Z Fast-Scroll Alphabet Sidebar
-                    if (alphabet.isNotEmpty()) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxHeight()
-                                .padding(start = 6.dp, end = 2.dp)
-                                .align(Alignment.CenterVertically),
-                            verticalArrangement = Arrangement.Center,
-                            horizontalAlignment = Alignment.CenterHorizontally
+                uiState.activeProfile?.let { prof ->
+                    if (prof.type != ProfileType.Normal) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "Aktif Mod: ${prof.name}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(horizontal = 8.dp)
+                        )
+                    }
+                }
+
+                // Universal Smart Search Results (Math, Contacts, Web & AI Chips)
+                com.aos.feature.appdrawer.components.SmartSearchResults(
+                    searchQuery = uiState.searchQuery,
+                    mathResult = uiState.mathResult,
+                    contactResults = uiState.contactResults,
+                    aiChipsEnabled = uiState.aiSearchChipsEnabled
+                )
+
+                // Category Title Header (Smart Launcher style)
+                if (uiState.searchQuery.isBlank()) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 8.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = selectedCategory.title,
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                            color = Color.White
+                        )
+                        Text(
+                            text = "${displayedApps.size} uygulama",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color.Gray
+                        )
+                    }
+                }
+
+                // AI Suggested Apps Shelf
+                if (uiState.suggestedApps.isNotEmpty() && uiState.searchQuery.isBlank() && selectedCategory == com.aos.core.domain.model.AppCategory.All) {
+                    SuggestedAppsRow(
+                        suggestions = uiState.suggestedApps,
+                        onAppClick = onAppClick
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                }
+
+                // Main Apps Grid with Side Alphabet Bar
+                if (uiState.isLoading) {
+                    Box(modifier = Modifier.fillMaxSize().weight(1f), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                    }
+                } else {
+                    Row(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                        LazyVerticalGrid(
+                            state = gridState,
+                            columns = GridCells.Fixed(4),
+                            contentPadding = PaddingValues(vertical = 6.dp),
+                            verticalArrangement = Arrangement.spacedBy(16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            modifier = Modifier.weight(1f)
                         ) {
-                            alphabet.forEach { letter ->
-                                Text(
-                                    text = letter.toString(),
-                                    color = Color.White.copy(alpha = 0.65f),
-                                    fontSize = 11.sp,
-                                    modifier = Modifier
-                                        .clickable {
-                                            val targetIndex = uiState.filteredApps.indexOfFirst {
-                                                it.label.firstOrNull()?.uppercaseChar() == letter
-                                            }
-                                            if (targetIndex >= 0) {
-                                                coroutineScope.launch {
-                                                    gridState.scrollToItem(targetIndex)
-                                                }
-                                            }
-                                        }
-                                        .padding(vertical = 1.5.dp, horizontal = 2.dp)
+                            itemsIndexed(
+                                items = displayedApps,
+                                key = { _, app -> app.packageName + app.activityName }
+                            ) { _, app ->
+                                AosAppIcon(
+                                    label = app.label,
+                                    packageName = app.packageName,
+                                    activityName = app.activityName,
+                                    onClick = { onAppClick(app.packageName, app.activityName) },
+                                    onLongClick = { onStartPlaceApp(app) }
                                 )
                             }
                         }
+
+                        // A..Z Fast-Scroll Alphabet Sidebar
+                        if (alphabet.isNotEmpty()) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxHeight()
+                                    .padding(start = 2.dp, end = 2.dp)
+                                    .align(Alignment.CenterVertically),
+                                verticalArrangement = Arrangement.Center,
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                alphabet.forEach { letter ->
+                                    Text(
+                                        text = letter.toString(),
+                                        color = Color.White.copy(alpha = 0.65f),
+                                        fontSize = 11.sp,
+                                        modifier = Modifier
+                                            .clickable {
+                                                val targetIndex = displayedApps.indexOfFirst {
+                                                    it.label.firstOrNull()?.uppercaseChar() == letter
+                                                }
+                                                if (targetIndex >= 0) {
+                                                    coroutineScope.launch {
+                                                        gridState.scrollToItem(targetIndex)
+                                                    }
+                                                }
+                                            }
+                                            .padding(vertical = 1.dp, horizontal = 2.dp)
+                                    )
+                                }
+                            }
+                        }
                     }
+                }
+
+                // Bottom Search Bar (if configured at bottom for Thumb Zone)
+                if (uiState.searchBarAtBottom) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    searchBarContent()
+                    Spacer(modifier = Modifier.height(10.dp))
                 }
             }
         }

@@ -10,6 +10,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -25,12 +26,17 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -62,8 +68,10 @@ import com.aos.core.ui.components.AosClockWidget
 import com.aos.core.ui.components.LauncherSearchBar
 import com.aos.core.ui.sensor.parallaxSensorEffect
 import com.aos.core.ui.theme.getIconShape
+import com.aos.core.domain.model.HomeLayoutMode
 import com.aos.feature.home.components.AssistantBottomSheet
 import com.aos.feature.home.components.DockBar
+import com.aos.feature.home.components.FlowerLayout
 import com.aos.feature.home.components.FolderModalDialog
 import com.aos.feature.home.components.GridCellLayout
 import com.aos.feature.home.components.GridLayoutPickerDialog
@@ -72,6 +80,8 @@ import com.aos.feature.home.components.OxygenEditModeTopBar
 import com.aos.feature.home.components.PageIndicator
 import com.aos.feature.home.components.ProfileSwitcherBar
 import com.aos.feature.home.components.SmartContextCardWidget
+import com.aos.feature.home.components.SmartWidgetPage
+import com.aos.feature.home.news.NewsFeedView
 import com.aos.feature.home.widget.LauncherWidgetHost
 import kotlinx.coroutines.launch
 
@@ -98,20 +108,29 @@ fun HomeScreen(
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    val enableWidgetPage = uiState.userPreferences.themeConfig.enableWidgetPage
+    val enableNewsFeed = uiState.userPreferences.themeConfig.enableNewsFeed
+    val homePageCount = maxOf(1, uiState.pages.size)
+    val widgetPageOffset = if (enableWidgetPage) 1 else 0
+    val newsPageOffset = if (enableNewsFeed) 1 else 0
+    val totalPageCount = widgetPageOffset + homePageCount + newsPageOffset
+
     val pagerState = rememberPagerState(
-        initialPage = 0,
-        pageCount = { maxOf(1, uiState.pages.size) }
+        initialPage = widgetPageOffset,
+        pageCount = { totalPageCount }
     )
+    val isCurrentPageHome = pagerState.currentPage in widgetPageOffset until (widgetPageOffset + homePageCount)
     val coroutineScope = rememberCoroutineScope()
 
     var activeFolder by remember { mutableStateOf<LauncherItem.FolderItem?>(null) }
     var isEditMode by remember { mutableStateOf(false) }
     var showGridLayoutPicker by remember { mutableStateOf(false) }
 
-    val effectiveEditMode = isEditMode || (pendingPlacedApp != null)
+    val effectiveEditMode = isEditMode
 
     // Intercept back button when in Edit Mode or placing an app
-    BackHandler(enabled = effectiveEditMode) {
+    BackHandler(enabled = isEditMode || (pendingPlacedApp != null)) {
         if (pendingPlacedApp != null) {
             onClearPendingPlacedApp()
         }
@@ -170,12 +189,12 @@ fun HomeScreen(
                 )
             }
             // Swipe gestures: Swipe-down for notifications, Swipe-up for App Drawer
-            .pointerInput(Unit) {
+            .pointerInput(isCurrentPageHome, effectiveEditMode) {
                 detectVerticalDragGestures { _, dragAmount ->
-                    if (!effectiveEditMode) {
-                        if (dragAmount < -35f) {
+                    if (!effectiveEditMode && isCurrentPageHome) {
+                        if (dragAmount < -45f) {
                             onOpenAppDrawer()
-                        } else if (dragAmount > 35f) {
+                        } else if (dragAmount > 45f) {
                             onOpenNotifications()
                         }
                     }
@@ -202,51 +221,16 @@ fun HomeScreen(
             ) {
                 // Top OxygenOS 16 Edit Mode Bar
                 AnimatedVisibility(
-                    visible = effectiveEditMode,
+                    visible = isEditMode,
                     enter = slideInVertically(initialOffsetY = { -it }) + fadeIn(),
                     exit = slideOutVertically(targetOffsetY = { -it }) + fadeOut()
                 ) {
-                    if (pendingPlacedApp != null) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 24.dp, vertical = 12.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Surface(
-                                shape = RoundedCornerShape(20.dp),
-                                color = Color(0xFF2A2B30).copy(alpha = 0.92f)
-                            ) {
-                                Text(
-                                    text = "Yerleştir: ${pendingPlacedApp.label}",
-                                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                                    color = Color.White,
-                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                                )
-                            }
-
-                            Surface(
-                                onClick = onClearPendingPlacedApp,
-                                shape = RoundedCornerShape(20.dp),
-                                color = Color(0xFFD32F2F).copy(alpha = 0.92f)
-                            ) {
-                                Text(
-                                    text = "Vazgeç",
-                                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                                    color = Color.White,
-                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                                )
-                            }
-                        }
-                    } else {
-                        OxygenEditModeTopBar(
-                            onGroupClick = {
-                                Toast.makeText(context, "Simgeler otomatik hizalandı", Toast.LENGTH_SHORT).show()
-                            },
-                            onDoneClick = { isEditMode = false }
-                        )
-                    }
+                    OxygenEditModeTopBar(
+                        onGroupClick = {
+                            Toast.makeText(context, "Simgeler otomatik hizalandı", Toast.LENGTH_SHORT).show()
+                        },
+                        onDoneClick = { isEditMode = false }
+                    )
                 }
 
                 // Live Home Page Screen Container (Scales smoothly to 0.88x)
@@ -269,46 +253,7 @@ fun HomeScreen(
                         )
                 ) {
                     Column(modifier = Modifier.fillMaxSize()) {
-                        // Built-in Clock Widget at the top
-                        AosClockWidget()
-
-                        // AI Proactive Smart Context Card
-                        SmartContextCardWidget(
-                            card = uiState.smartContextCard,
-                            onActionClick = { actionType, payload ->
-                                when (actionType) {
-                                    SmartActionType.LaunchApp -> handleAppClick(payload, "")
-                                    SmartActionType.SwitchProfile -> {
-                                        val id = payload.toLongOrNull() ?: 1L
-                                        viewModel.switchProfile(id)
-                                    }
-                                    SmartActionType.SearchWeb -> onOpenSearch(uiState.userPreferences.themeConfig.searchEngine)
-                                    SmartActionType.OpenSettings -> onOpenSettings()
-                                    SmartActionType.LockScreen -> onDoubleTapSleep()
-                                    SmartActionType.None -> {}
-                                }
-                            }
-                        )
-
-                        // Profile Switcher Bar (Quick Mode Pills)
-                        if (uiState.profiles.isNotEmpty()) {
-                            ProfileSwitcherBar(
-                                profiles = uiState.profiles,
-                                activeProfile = uiState.activeProfile,
-                                onProfileSelect = { profile ->
-                                    viewModel.switchProfile(profile.id)
-                                }
-                            )
-                        }
-
-                        // Search Bar Capsule (mic opens AI Assistant)
-                        LauncherSearchBar(
-                            engine = uiState.userPreferences.themeConfig.searchEngine,
-                            onSearchClick = { onOpenSearch(uiState.userPreferences.themeConfig.searchEngine) },
-                            onVoiceSearchClick = { viewModel.setAssistantSheetOpen(true) }
-                        )
-
-                        // Main Horizontal Pager for Home Pages with 3D Transitions & Gyro Parallax
+                        // Main 3-Panel Horizontal Pager
                         HorizontalPager(
                             state = pagerState,
                             modifier = Modifier
@@ -319,7 +264,6 @@ fun HomeScreen(
                                     maxOffsetDp = 8.dp
                                 )
                         ) { pageIndex ->
-                            val pageItems = uiState.itemsByPage[pageIndex] ?: emptyList()
                             val pageOffset = (pagerState.currentPage - pageIndex) + pagerState.currentPageOffsetFraction
 
                             Box(
@@ -330,31 +274,202 @@ fun HomeScreen(
                                         effect = uiState.userPreferences.themeConfig.pageTransition
                                     )
                             ) {
-                                GridCellLayout(
-                                    items = pageItems,
-                                    columns = uiState.userPreferences.gridColumns,
-                                    rows = uiState.userPreferences.gridRows,
-                                    iconShape = activeIconShape,
-                                    showLabels = uiState.userPreferences.showAppLabels,
-                                    notificationCounts = activeBadges,
-                                    isEditMode = effectiveEditMode,
-                                    pendingPlacedApp = pendingPlacedApp,
-                                    onPlacePendingApp = { app, cellX, cellY ->
-                                        viewModel.placeAppAt(app, cellX, cellY, pageIndex)
-                                        onClearPendingPlacedApp()
-                                        Toast.makeText(context, "${app.label} ana ekrana yerleştirildi", Toast.LENGTH_SHORT).show()
-                                    },
-                                    onAppClick = handleAppClick,
-                                    onFolderClick = { folder -> activeFolder = folder },
-                                    onMoveItem = { itemId, x, y -> viewModel.moveItem(itemId, x, y, pageIndex) },
-                                    onMergeIntoFolder = { dragged, target -> viewModel.mergeAppsIntoFolder(dragged, target) },
-                                    onAddToExistingFolder = { dragged, targetFolder -> viewModel.addAppToExistingFolder(dragged, targetFolder) },
-                                    onRemoveItem = viewModel::deleteItem,
-                                    onAppInfo = onAppInfo,
-                                    onUninstall = onUninstall,
-                                    onEmptyAreaLongClick = { isEditMode = true },
-                                    widgetHost = widgetHost
-                                )
+                                if (enableWidgetPage && pageIndex == 0) {
+                                    // Left Panel: Smart Widget Page
+                                    val allWidgets = remember(uiState.itemsByPage) {
+                                        uiState.itemsByPage.values.flatten().filterIsInstance<LauncherItem.WidgetItem>()
+                                    }
+                                    SmartWidgetPage(
+                                        widgets = allWidgets,
+                                        onAddWidget = {
+                                            if (effectiveEditMode) isEditMode = false
+                                            onAddWidget()
+                                        },
+                                        onRemoveWidget = viewModel::deleteItem,
+                                        widgetHost = widgetHost
+                                    )
+                                } else if (enableNewsFeed && pageIndex == totalPageCount - 1) {
+                                    // Right Panel: RSS News Feed
+                                    NewsFeedView(
+                                        articles = uiState.newsArticles,
+                                        isLoading = uiState.isNewsLoading,
+                                        onRefresh = viewModel::refreshNews
+                                    )
+                                } else {
+                                    // Center Panels: Main Home Pages
+                                    val homeIndex = pageIndex - widgetPageOffset
+                                    val pageItems = uiState.itemsByPage[homeIndex] ?: emptyList()
+
+                                    Column(modifier = Modifier.fillMaxSize()) {
+                                        // Built-in Clock Widget at the top
+                                        if (uiState.userPreferences.themeConfig.enableClockWidget) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .pointerInput(Unit) {
+                                                        detectTapGestures(
+                                                            onLongPress = { isEditMode = true }
+                                                        )
+                                                    }
+                                            ) {
+                                                AosClockWidget()
+
+                                                if (effectiveEditMode) {
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .align(Alignment.TopEnd)
+                                                            .padding(top = 10.dp, end = 20.dp)
+                                                            .size(24.dp)
+                                                            .clip(CircleShape)
+                                                            .background(Color(0xFFE53935))
+                                                            .clickable {
+                                                                viewModel.setClockWidgetEnabled(false)
+                                                                Toast.makeText(context, "Saat widget'ı kaldırıldı", Toast.LENGTH_SHORT).show()
+                                                            },
+                                                        contentAlignment = Alignment.Center
+                                                    ) {
+                                                        Icon(
+                                                            imageVector = Icons.Default.Close,
+                                                            contentDescription = "Saat Widget'ını Kaldır",
+                                                            tint = Color.White,
+                                                            modifier = Modifier.size(14.dp)
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        }
+
+                                        // AI Proactive Smart Context Card
+                                        if (uiState.userPreferences.themeConfig.enableSmartContextCard) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .pointerInput(Unit) {
+                                                        detectTapGestures(
+                                                            onLongPress = { isEditMode = true }
+                                                        )
+                                                    }
+                                            ) {
+                                                SmartContextCardWidget(
+                                                    card = uiState.smartContextCard,
+                                                    onActionClick = { actionType, payload ->
+                                                        when (actionType) {
+                                                            SmartActionType.LaunchApp -> handleAppClick(payload, "")
+                                                            SmartActionType.SwitchProfile -> {
+                                                                val id = payload.toLongOrNull() ?: 1L
+                                                                viewModel.switchProfile(id)
+                                                            }
+                                                            SmartActionType.SearchWeb -> onOpenSearch(uiState.userPreferences.themeConfig.searchEngine)
+                                                            SmartActionType.OpenSettings -> onOpenSettings()
+                                                            SmartActionType.LockScreen -> onDoubleTapSleep()
+                                                            SmartActionType.None -> {}
+                                                        }
+                                                    }
+                                                )
+
+                                                if (effectiveEditMode) {
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .align(Alignment.TopEnd)
+                                                            .padding(top = 8.dp, end = 20.dp)
+                                                            .size(24.dp)
+                                                            .clip(CircleShape)
+                                                            .background(Color(0xFFE53935))
+                                                            .clickable {
+                                                                viewModel.setSmartContextCardEnabled(false)
+                                                                Toast.makeText(context, "Akıllı kart kaldırıldı", Toast.LENGTH_SHORT).show()
+                                                            },
+                                                        contentAlignment = Alignment.Center
+                                                    ) {
+                                                        Icon(
+                                                            imageVector = Icons.Default.Close,
+                                                            contentDescription = "Akıllı Kartı Kaldır",
+                                                            tint = Color.White,
+                                                            modifier = Modifier.size(14.dp)
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        }
+
+                                        // Profile Switcher Bar (Quick Mode Pills)
+                                        if (uiState.profiles.isNotEmpty()) {
+                                            ProfileSwitcherBar(
+                                                profiles = uiState.profiles,
+                                                activeProfile = uiState.activeProfile,
+                                                onProfileSelect = { profile ->
+                                                    viewModel.switchProfile(profile.id)
+                                                }
+                                            )
+                                        }
+
+                                        // Top Search Bar (if not at bottom)
+                                        if (!uiState.userPreferences.themeConfig.searchBarAtBottom) {
+                                            LauncherSearchBar(
+                                                engine = uiState.userPreferences.themeConfig.searchEngine,
+                                                onSearchClick = { onOpenSearch(uiState.userPreferences.themeConfig.searchEngine) },
+                                                onVoiceSearchClick = { viewModel.setAssistantSheetOpen(true) }
+                                            )
+                                        }
+
+                                        // Main Icon Content: Flower or Grid
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .weight(1f)
+                                        ) {
+                                            if (uiState.userPreferences.themeConfig.homeLayoutMode == HomeLayoutMode.Flower && homeIndex == 0) {
+                                                FlowerLayout(
+                                                    items = pageItems,
+                                                    iconShape = activeIconShape,
+                                                    showLabels = uiState.userPreferences.showAppLabels,
+                                                    notificationCounts = activeBadges,
+                                                    onAppClick = handleAppClick,
+                                                    onFolderClick = { folder -> activeFolder = folder },
+                                                    onEmptySlotClick = onOpenAppDrawer,
+                                                    isEditMode = effectiveEditMode,
+                                                    onRemoveItem = viewModel::deleteItem,
+                                                    onItemLongClick = { isEditMode = true }
+                                                )
+                                            } else {
+                                                GridCellLayout(
+                                                    items = pageItems,
+                                                    columns = uiState.userPreferences.gridColumns,
+                                                    rows = uiState.userPreferences.gridRows,
+                                                    iconShape = activeIconShape,
+                                                    showLabels = uiState.userPreferences.showAppLabels,
+                                                    notificationCounts = activeBadges,
+                                                    isEditMode = effectiveEditMode,
+                                                    pendingPlacedApp = pendingPlacedApp,
+                                                    onPlacePendingApp = { app, cellX, cellY ->
+                                                        viewModel.placeAppAt(app, cellX, cellY, homeIndex)
+                                                        onClearPendingPlacedApp()
+                                                        Toast.makeText(context, "${app.label} ana ekrana yerleştirildi", Toast.LENGTH_SHORT).show()
+                                                    },
+                                                    onAppClick = handleAppClick,
+                                                    onFolderClick = { folder -> activeFolder = folder },
+                                                    onMoveItem = { itemId, x, y -> viewModel.moveItem(itemId, x, y, homeIndex) },
+                                                    onMergeIntoFolder = { dragged, target -> viewModel.mergeAppsIntoFolder(dragged, target) },
+                                                    onAddToExistingFolder = { dragged, targetFolder -> viewModel.addAppToExistingFolder(dragged, targetFolder) },
+                                                    onRemoveItem = viewModel::deleteItem,
+                                                    onAppInfo = onAppInfo,
+                                                    onUninstall = onUninstall,
+                                                    onEmptyAreaLongClick = { isEditMode = true },
+                                                    widgetHost = widgetHost
+                                                )
+                                            }
+                                        }
+
+                                        // Bottom Search Bar (if configured at bottom for Thumb Zone)
+                                        if (uiState.userPreferences.themeConfig.searchBarAtBottom) {
+                                            LauncherSearchBar(
+                                                engine = uiState.userPreferences.themeConfig.searchEngine,
+                                                onSearchClick = { onOpenSearch(uiState.userPreferences.themeConfig.searchEngine) },
+                                                onVoiceSearchClick = { viewModel.setAssistantSheetOpen(true) }
+                                            )
+                                        }
+                                    }
+                                }
                             }
                         }
 

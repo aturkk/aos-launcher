@@ -74,6 +74,26 @@ class UserPreferencesRepositoryImpl @Inject constructor(
         dataStore.setNewsFeedEnabled(enabled)
     }
 
+    override suspend fun setWidgetPageEnabled(enabled: Boolean) {
+        dataStore.setWidgetPageEnabled(enabled)
+    }
+
+    override suspend fun setHomeLayoutMode(mode: com.aos.core.domain.model.HomeLayoutMode) {
+        dataStore.setHomeLayoutMode(mode.name)
+    }
+
+    override suspend fun setSearchBarAtBottom(atBottom: Boolean) {
+        dataStore.setSearchBarAtBottom(atBottom)
+    }
+
+    override suspend fun setClockWidgetEnabled(enabled: Boolean) {
+        dataStore.setClockWidgetEnabled(enabled)
+    }
+
+    override suspend fun setSmartContextCardEnabled(enabled: Boolean) {
+        dataStore.setSmartContextCardEnabled(enabled)
+    }
+
     override suspend fun setOnboardingCompleted(completed: Boolean) {
         dataStore.setOnboardingCompleted(completed)
     }

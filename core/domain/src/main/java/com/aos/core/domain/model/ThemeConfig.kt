@@ -45,6 +45,11 @@ enum class SearchEngineOption {
     }
 }
 
+enum class HomeLayoutMode {
+    Grid,
+    Flower
+}
+
 data class ThemeConfig(
     val darkMode: DarkModeOption = DarkModeOption.System,
     val useDynamicColors: Boolean = true,
@@ -59,5 +64,10 @@ data class ThemeConfig(
     val enableMathCalculator: Boolean = true,
     val enableContactsSearch: Boolean = true,
     val enableAiSearchChips: Boolean = true,
-    val enableNewsFeed: Boolean = true
+    val enableNewsFeed: Boolean = true,
+    val enableWidgetPage: Boolean = true,
+    val homeLayoutMode: HomeLayoutMode = HomeLayoutMode.Grid,
+    val searchBarAtBottom: Boolean = false,
+    val enableClockWidget: Boolean = true,
+    val enableSmartContextCard: Boolean = true
 )

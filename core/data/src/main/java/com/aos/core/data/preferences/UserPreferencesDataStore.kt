@@ -45,6 +45,11 @@ class UserPreferencesDataStore @Inject constructor(
         val CONTACTS_SEARCH_ENABLED = booleanPreferencesKey("contacts_search_enabled")
         val AI_SEARCH_CHIPS_ENABLED = booleanPreferencesKey("ai_search_chips_enabled")
         val NEWS_FEED_ENABLED = booleanPreferencesKey("news_feed_enabled")
+        val WIDGET_PAGE_ENABLED = booleanPreferencesKey("widget_page_enabled")
+        val HOME_LAYOUT_MODE = stringPreferencesKey("home_layout_mode")
+        val SEARCH_BAR_AT_BOTTOM = booleanPreferencesKey("search_bar_at_bottom")
+        val ENABLE_CLOCK_WIDGET = booleanPreferencesKey("enable_clock_widget")
+        val ENABLE_SMART_CONTEXT_CARD = booleanPreferencesKey("enable_smart_context_card")
         val HIDDEN_PACKAGES = stringSetPreferencesKey("hidden_packages")
         val VAULT_PIN = stringPreferencesKey("vault_pin")
         val ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
@@ -68,6 +73,11 @@ class UserPreferencesDataStore @Inject constructor(
         val contactsSearch = preferences[PreferencesKeys.CONTACTS_SEARCH_ENABLED] ?: true
         val aiChips = preferences[PreferencesKeys.AI_SEARCH_CHIPS_ENABLED] ?: true
         val newsFeed = preferences[PreferencesKeys.NEWS_FEED_ENABLED] ?: true
+        val widgetPage = preferences[PreferencesKeys.WIDGET_PAGE_ENABLED] ?: true
+        val homeLayoutStr = preferences[PreferencesKeys.HOME_LAYOUT_MODE] ?: com.aos.core.domain.model.HomeLayoutMode.Grid.name
+        val searchAtBottom = preferences[PreferencesKeys.SEARCH_BAR_AT_BOTTOM] ?: false
+        val clockWidget = preferences[PreferencesKeys.ENABLE_CLOCK_WIDGET] ?: true
+        val smartCard = preferences[PreferencesKeys.ENABLE_SMART_CONTEXT_CARD] ?: true
         val onboardingCompleted = preferences[PreferencesKeys.ONBOARDING_COMPLETED] ?: false
 
         UserPreferences(
@@ -87,7 +97,12 @@ class UserPreferencesDataStore @Inject constructor(
                 enableMathCalculator = mathCalc,
                 enableContactsSearch = contactsSearch,
                 enableAiSearchChips = aiChips,
-                enableNewsFeed = newsFeed
+                enableNewsFeed = newsFeed,
+                enableWidgetPage = widgetPage,
+                homeLayoutMode = runCatching { com.aos.core.domain.model.HomeLayoutMode.valueOf(homeLayoutStr) }.getOrDefault(com.aos.core.domain.model.HomeLayoutMode.Grid),
+                searchBarAtBottom = searchAtBottom,
+                enableClockWidget = clockWidget,
+                enableSmartContextCard = smartCard
             ),
             isOnboardingCompleted = onboardingCompleted
         )
@@ -253,6 +268,36 @@ class UserPreferencesDataStore @Inject constructor(
     suspend fun setNewsFeedEnabled(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.NEWS_FEED_ENABLED] = enabled
+        }
+    }
+
+    suspend fun setWidgetPageEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.WIDGET_PAGE_ENABLED] = enabled
+        }
+    }
+
+    suspend fun setHomeLayoutMode(mode: String) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.HOME_LAYOUT_MODE] = mode
+        }
+    }
+
+    suspend fun setSearchBarAtBottom(atBottom: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.SEARCH_BAR_AT_BOTTOM] = atBottom
+        }
+    }
+
+    suspend fun setClockWidgetEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.ENABLE_CLOCK_WIDGET] = enabled
+        }
+    }
+
+    suspend fun setSmartContextCardEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.ENABLE_SMART_CONTEXT_CARD] = enabled
         }
     }
 }

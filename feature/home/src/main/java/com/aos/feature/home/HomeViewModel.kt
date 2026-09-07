@@ -9,6 +9,7 @@ import com.aos.core.domain.model.PageInfo
 import com.aos.core.domain.model.Profile
 import com.aos.core.domain.model.AssistantResult
 import com.aos.core.domain.repository.LauncherRepository
+import com.aos.core.domain.repository.NewsFeedRepository
 import com.aos.core.domain.repository.ProfileRepository
 import com.aos.core.domain.repository.SmartAssistantRepository
 import com.aos.core.domain.repository.UserPreferencesRepository
@@ -26,7 +27,8 @@ class HomeViewModel @Inject constructor(
     private val launcherRepository: LauncherRepository,
     private val userPreferencesRepository: UserPreferencesRepository,
     private val profileRepository: ProfileRepository,
-    private val smartAssistantRepository: SmartAssistantRepository
+    private val smartAssistantRepository: SmartAssistantRepository,
+    private val newsFeedRepository: NewsFeedRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState(isLoading = true))
@@ -36,6 +38,12 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             smartAssistantRepository.getSmartContextCard().collect { card ->
                 _uiState.update { it.copy(smartContextCard = card) }
+            }
+        }
+
+        viewModelScope.launch {
+            newsFeedRepository.getNewsArticles().collect { articles ->
+                _uiState.update { it.copy(newsArticles = articles) }
             }
         }
 
@@ -311,6 +319,30 @@ class HomeViewModel @Inject constructor(
 
     fun clearAssistantResult() {
         _uiState.update { it.copy(assistantResult = null) }
+    }
+
+    fun refreshNews() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isNewsLoading = true) }
+            try {
+                val refreshed = newsFeedRepository.refreshNews()
+                _uiState.update { it.copy(newsArticles = refreshed, isNewsLoading = false) }
+            } catch (_: Exception) {
+                _uiState.update { it.copy(isNewsLoading = false) }
+            }
+        }
+    }
+
+    fun setClockWidgetEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            userPreferencesRepository.setClockWidgetEnabled(enabled)
+        }
+    }
+
+    fun setSmartContextCardEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            userPreferencesRepository.setSmartContextCardEnabled(enabled)
+        }
     }
 
     fun setOnboardingCompleted(completed: Boolean) {

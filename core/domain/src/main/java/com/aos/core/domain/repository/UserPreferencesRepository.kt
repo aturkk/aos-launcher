@@ -1,5 +1,6 @@
 package com.aos.core.domain.repository
 
+import com.aos.core.domain.model.HomeLayoutMode
 import com.aos.core.domain.model.IconShapeOption
 import com.aos.core.domain.model.PageTransitionEffect
 import com.aos.core.domain.model.SearchEngineOption
@@ -31,5 +32,10 @@ interface UserPreferencesRepository {
     suspend fun setContactsSearchEnabled(enabled: Boolean)
     suspend fun setAiSearchChipsEnabled(enabled: Boolean)
     suspend fun setNewsFeedEnabled(enabled: Boolean)
+    suspend fun setWidgetPageEnabled(enabled: Boolean)
+    suspend fun setHomeLayoutMode(mode: HomeLayoutMode)
+    suspend fun setSearchBarAtBottom(atBottom: Boolean)
+    suspend fun setClockWidgetEnabled(enabled: Boolean)
+    suspend fun setSmartContextCardEnabled(enabled: Boolean)
     suspend fun setOnboardingCompleted(completed: Boolean)
 }
