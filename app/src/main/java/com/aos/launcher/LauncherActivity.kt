@@ -54,6 +54,77 @@ class LauncherActivity : ComponentActivity() {
 
     private lateinit var widgetHost: LauncherWidgetHost
     private lateinit var appWidgetManager: AppWidgetManager
+    private var pendingWidgetId: Int = -1
+    private var homeViewModelRef: HomeViewModel? = null
+
+    private val pickWidgetLauncher = registerForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == RESULT_OK) {
+            val appWidgetId = result.data?.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, pendingWidgetId) ?: pendingWidgetId
+            if (appWidgetId != -1) {
+                configureOrAddWidget(appWidgetId)
+            }
+        } else {
+            if (pendingWidgetId != -1) {
+                widgetHost.deleteAppWidgetId(pendingWidgetId)
+                pendingWidgetId = -1
+            }
+        }
+    }
+
+    private val configureWidgetLauncher = registerForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == RESULT_OK) {
+            val appWidgetId = result.data?.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, pendingWidgetId) ?: pendingWidgetId
+            if (appWidgetId != -1) {
+                completeAddWidget(appWidgetId)
+            }
+        } else {
+            if (pendingWidgetId != -1) {
+                widgetHost.deleteAppWidgetId(pendingWidgetId)
+                pendingWidgetId = -1
+            }
+        }
+    }
+
+    private fun configureOrAddWidget(appWidgetId: Int) {
+        val appWidgetInfo = appWidgetManager.getAppWidgetInfo(appWidgetId)
+        if (appWidgetInfo?.configure != null) {
+            pendingWidgetId = appWidgetId
+            val intent = Intent(AppWidgetManager.ACTION_APPWIDGET_CONFIGURE).apply {
+                component = appWidgetInfo.configure
+                putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
+            }
+            configureWidgetLauncher.launch(intent)
+        } else {
+            completeAddWidget(appWidgetId)
+        }
+    }
+
+    private fun completeAddWidget(appWidgetId: Int) {
+        val appWidgetInfo = appWidgetManager.getAppWidgetInfo(appWidgetId) ?: return
+        val minWidth = appWidgetInfo.minWidth
+        val minHeight = appWidgetInfo.minHeight
+        val spanX = ((minWidth + 30) / 70).coerceIn(1, 4)
+        val spanY = ((minHeight + 30) / 70).coerceIn(1, 4)
+        homeViewModelRef?.addWidget(appWidgetId, spanX, spanY)
+        pendingWidgetId = -1
+    }
+
+    private fun startPickWidget() {
+        try {
+            val appWidgetId = widgetHost.allocateAppWidgetId()
+            pendingWidgetId = appWidgetId
+            val pickIntent = Intent(AppWidgetManager.ACTION_APPWIDGET_PICK).apply {
+                putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
+            }
+            pickWidgetLauncher.launch(pickIntent)
+        } catch (e: Exception) {
+            Toast.makeText(this, "Widget seçici açılamadı: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -75,6 +146,7 @@ class LauncherActivity : ComponentActivity() {
 
         setContent {
             val homeViewModel: HomeViewModel = hiltViewModel()
+            homeViewModelRef = homeViewModel
             val homeUiState by homeViewModel.uiState.collectAsStateWithLifecycle()
             val themeConfig = homeUiState.userPreferences.themeConfig
             val notificationCounts by AosNotificationListenerService.notificationCounts.collectAsStateWithLifecycle()
@@ -126,6 +198,8 @@ class LauncherActivity : ComponentActivity() {
                             LauncherSystemActions.lockDevice(this@LauncherActivity)
                         },
                         onOpenSettings = { isSettingsOpen = true },
+                        onAddWidget = { startPickWidget() },
+                        widgetHost = widgetHost,
                         onOpenSearch = { engine ->
                             val queryUrl = when (engine) {
                                 SearchEngineOption.Google -> "https://www.google.com"

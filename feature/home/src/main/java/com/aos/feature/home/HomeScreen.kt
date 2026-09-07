@@ -1,23 +1,27 @@
-package com.aos.feature.home
+﻿package com.aos.feature.home
 
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -31,6 +35,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -48,11 +54,11 @@ import com.aos.feature.home.components.AssistantBottomSheet
 import com.aos.feature.home.components.DockBar
 import com.aos.feature.home.components.FolderModalDialog
 import com.aos.feature.home.components.GridCellLayout
-import com.aos.feature.home.components.HomeActionMenuSheet
+import com.aos.feature.home.components.HomeScreenEditMode
 import com.aos.feature.home.components.PageIndicator
-import com.aos.feature.home.components.PagesOverviewSheet
 import com.aos.feature.home.components.ProfileSwitcherBar
 import com.aos.feature.home.components.SmartContextCardWidget
+import com.aos.feature.home.widget.LauncherWidgetHost
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -64,6 +70,8 @@ fun HomeScreen(
     onOpenNotifications: () -> Unit,
     onDoubleTapSleep: () -> Unit,
     onOpenSettings: () -> Unit,
+    onAddWidget: () -> Unit = {},
+    widgetHost: LauncherWidgetHost? = null,
     onOpenSearch: (SearchEngineOption) -> Unit = {},
     onOpenVoiceSearch: () -> Unit = {},
     onExecuteAssistantResult: (AssistantResult) -> Unit = {},
@@ -80,8 +88,12 @@ fun HomeScreen(
     val coroutineScope = rememberCoroutineScope()
 
     var activeFolder by remember { mutableStateOf<LauncherItem.FolderItem?>(null) }
-    var isOverviewSheetOpen by remember { mutableStateOf(false) }
-    var isHomeMenuOpen by remember { mutableStateOf(false) }
+    var isEditMode by remember { mutableStateOf(false) }
+
+    // Intercept back button when in Edit Mode
+    BackHandler(enabled = isEditMode) {
+        isEditMode = false
+    }
 
     // Blocked App mindful friction dialog state
     var blockedAppPending by remember { mutableStateOf<Pair<String, String>?>(null) }
@@ -102,12 +114,17 @@ fun HomeScreen(
         }
     }
 
+    val homeScale by animateFloatAsState(
+        targetValue = if (isEditMode) 0.88f else 1f,
+        label = "homeScale"
+    )
+
     Box(
         modifier = modifier
             .fillMaxSize()
             .statusBarsPadding()
             .navigationBarsPadding()
-            // Double-tap to sleep and long-press for Home Menu on wallpaper
+            // Double-tap to sleep and long-press for Edit Mode on wallpaper
             .pointerInput(uiState.userPreferences.doubleTapToSleep) {
                 detectTapGestures(
                     onDoubleTap = {
@@ -116,7 +133,7 @@ fun HomeScreen(
                         }
                     },
                     onLongPress = {
-                        isHomeMenuOpen = true
+                        isEditMode = true
                     }
                 )
             }
@@ -130,11 +147,11 @@ fun HomeScreen(
                     }
                 }
             }
-            // Pinch-in for pages overview
+            // Pinch-in to enter Edit Mode
             .pointerInput(Unit) {
                 detectTransformGestures { _, _, zoom, _ ->
                     if (zoom < 0.85f) {
-                        isOverviewSheetOpen = true
+                        isEditMode = true
                     }
                 }
             }
@@ -146,7 +163,12 @@ fun HomeScreen(
             )
         } else {
             Column(
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer {
+                        scaleX = homeScale
+                        scaleY = homeScale
+                    }
             ) {
                 // Built-in Clock Widget at the top
                 AosClockWidget()
@@ -200,7 +222,6 @@ fun HomeScreen(
                 ) { pageIndex ->
                     val pageItems = uiState.itemsByPage[pageIndex] ?: emptyList()
 
-                    // Calculate page offset for 3D graphics transition effect
                     val pageOffset = (pagerState.currentPage - pageIndex) + pagerState.currentPageOffsetFraction
 
                     Box(
@@ -225,19 +246,20 @@ fun HomeScreen(
                             onRemoveItem = viewModel::deleteItem,
                             onAppInfo = onAppInfo,
                             onUninstall = onUninstall,
-                            onEmptyAreaLongClick = { isHomeMenuOpen = true }
+                            onEmptyAreaLongClick = { isEditMode = true },
+                            widgetHost = widgetHost
                         )
                     }
                 }
 
-                // Page Indicator (Clickable to manage pages)
+                // Page Indicator (Clickable to enter Edit Mode)
                 PageIndicator(
                     pageCount = pagerState.pageCount,
                     currentPage = pagerState.currentPage,
                     modifier = Modifier
                         .align(Alignment.CenterHorizontally)
                         .clip(RoundedCornerShape(12.dp))
-                        .clickable { isOverviewSheetOpen = true }
+                        .clickable { isEditMode = true }
                         .padding(horizontal = 12.dp, vertical = 6.dp)
                 )
 
@@ -252,14 +274,35 @@ fun HomeScreen(
             }
         }
 
-        // Home Screen Long-Press Action Menu (Settings, Manage Pages, Wallpaper, Widgets)
-        HomeActionMenuSheet(
-            isOpen = isHomeMenuOpen,
-            onDismiss = { isHomeMenuOpen = false },
-            onOpenSettings = onOpenSettings,
-            onOpenPagesOverview = { isOverviewSheetOpen = true },
-            onAddNewPage = viewModel::addNewPage
-        )
+        // Standard Launcher Full Edit Mode Screen (Pages carousel, Add Widget, Wallpaper, Settings)
+        AnimatedVisibility(
+            visible = isEditMode,
+            enter = fadeIn(),
+            exit = fadeOut()
+        ) {
+            HomeScreenEditMode(
+                isOpen = isEditMode,
+                pages = uiState.pages,
+                itemsByPage = uiState.itemsByPage,
+                currentPageIndex = pagerState.currentPage,
+                onSelectPage = { targetPage ->
+                    coroutineScope.launch {
+                        pagerState.animateScrollToPage(targetPage)
+                    }
+                },
+                onAddNewPage = viewModel::addNewPage,
+                onDeletePage = viewModel::deletePage,
+                onAddWidget = {
+                    isEditMode = false
+                    onAddWidget()
+                },
+                onOpenSettings = {
+                    isEditMode = false
+                    onOpenSettings()
+                },
+                onDismiss = { isEditMode = false }
+            )
+        }
 
         // Folder Modal Dialog
         activeFolder?.let { folder ->
@@ -280,22 +323,6 @@ fun HomeScreen(
                     viewModel.deleteItem(folder.id)
                     activeFolder = null
                 }
-            )
-        }
-
-        // Pages Overview Sheet
-        if (isOverviewSheetOpen) {
-            PagesOverviewSheet(
-                pages = uiState.pages,
-                currentPageIndex = pagerState.currentPage,
-                onSelectPage = { targetPage ->
-                    coroutineScope.launch {
-                        pagerState.animateScrollToPage(targetPage)
-                    }
-                },
-                onAddNewPage = viewModel::addNewPage,
-                onDeletePage = viewModel::deletePage,
-                onDismiss = { isOverviewSheetOpen = false }
             )
         }
 

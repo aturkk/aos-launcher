@@ -78,6 +78,8 @@ class LauncherRepositoryImpl @Inject constructor(
     override suspend fun deletePage(pageIndex: Int) = withContext(ioDispatcher) {
         launcherItemDao.deleteItemsOnPage(pageIndex)
         pageDao.deletePage(pageIndex)
+        pageDao.decrementPageIndicesAbove(pageIndex)
+        launcherItemDao.decrementPageIndicesAbove(pageIndex)
     }
 
     private fun LauncherItemEntity.toDomain(): LauncherItem = when (itemType) {

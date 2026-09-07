@@ -56,6 +56,7 @@ fun AppUpdateSection(
     isAutoUpdateEnabled: Boolean,
     onCheckForUpdates: () -> Unit,
     onDownloadAndInstall: (AppUpdateInfo) -> Unit,
+    onInstallApk: (java.io.File) -> Unit = {},
     onToggleAutoUpdate: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -348,7 +349,7 @@ fun AppUpdateSection(
                             )
 
                             Button(
-                                onClick = { onDownloadAndInstall(updateStatus.updateInfo) },
+                                onClick = { onInstallApk(updateStatus.apkFile) },
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = RoundedCornerShape(10.dp)
                             ) {

@@ -1,24 +1,44 @@
-package com.aos.feature.home.components
+﻿package com.aos.feature.home.components
 
-import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.awaitLongPressOrCancellation
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.drag
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -26,6 +46,8 @@ import androidx.compose.ui.zIndex
 import com.aos.core.domain.model.LauncherItem
 import com.aos.core.ui.components.AosAppIcon
 import com.aos.core.ui.theme.SquircleShape
+import com.aos.feature.home.widget.LauncherWidgetHost
+import com.aos.feature.home.widget.SystemWidgetView
 import kotlin.math.roundToInt
 
 @Composable
@@ -44,6 +66,7 @@ fun GridCellLayout(
     onAppInfo: (packageName: String) -> Unit,
     onUninstall: (packageName: String) -> Unit,
     onEmptyAreaLongClick: () -> Unit = {},
+    widgetHost: LauncherWidgetHost? = null,
     modifier: Modifier = Modifier
 ) {
     val density = LocalDensity.current
@@ -68,6 +91,42 @@ fun GridCellLayout(
         var draggedItemId by remember { mutableStateOf<Long?>(null) }
         var dragOffset by remember { mutableStateOf(Offset.Zero) }
 
+        // Drop zone at the top when dragging
+        AnimatedVisibility(
+            visible = draggedItemId != null,
+            enter = fadeIn(),
+            exit = fadeOut(),
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(top = 4.dp)
+                .zIndex(30f)
+        ) {
+            Surface(
+                shape = RoundedCornerShape(20.dp),
+                color = Color(0xFFD32F2F).copy(alpha = 0.92f),
+                shadowElevation = 8.dp,
+                modifier = Modifier.padding(4.dp)
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Kaldırmak için buraya bırakın",
+                        color = Color.White,
+                        style = MaterialTheme.typography.labelMedium
+                    )
+                }
+            }
+        }
+
         items.forEach { item ->
             val isBeingDragged = draggedItemId == item.id
 
@@ -82,11 +141,11 @@ fun GridCellLayout(
                             y = (with(density) { baseOffsetY.toPx() } + dragOffset.y).roundToInt()
                         )
                     }
-                    .zIndex(10f)
+                    .zIndex(20f)
                     .graphicsLayer {
                         scaleX = 1.15f
                         scaleY = 1.15f
-                        shadowElevation = 12f
+                        shadowElevation = 16f
                     }
             } else {
                 Modifier.offset(x = baseOffsetX, y = baseOffsetY)
@@ -94,55 +153,52 @@ fun GridCellLayout(
 
             when (item) {
                 is LauncherItem.AppItem -> {
-                    var menuExpanded by remember { mutableStateOf(false) }
-                    var totalDragDistance by remember { mutableFloatStateOf(0f) }
-
                     Box(
                         modifier = itemModifier
                             .size(width = cellWidth * item.spanX, height = cellHeight * item.spanY)
                             .pointerInput(item.id) {
-                                detectDragGesturesAfterLongPress(
-                                    onDragStart = {
+                                awaitEachGesture {
+                                    val down = awaitFirstDown(requireUnconsumed = false)
+                                    val longPress = awaitLongPressOrCancellation(down.id)
+                                    if (longPress != null) {
+                                        // Long press -> Start dragging
                                         draggedItemId = item.id
                                         dragOffset = Offset.Zero
-                                        totalDragDistance = 0f
-                                    },
-                                    onDrag = { change, dragAmount ->
-                                        change.consume()
-                                        dragOffset += dragAmount
-                                        totalDragDistance += dragAmount.getDistance()
-                                    },
-                                    onDragEnd = {
-                                        if (totalDragDistance < 25f) {
-                                            // Long press without drag: show context menu
-                                            menuExpanded = true
-                                        } else {
-                                            // Drag gesture: calculate target cell
-                                            val totalOffsetX = with(density) { baseOffsetX.toPx() } + dragOffset.x
-                                            val totalOffsetY = with(density) { baseOffsetY.toPx() } + dragOffset.y
-
-                                            val targetCellX = (totalOffsetX / cellWidthPx).toInt().coerceIn(0, columns - 1)
-                                            val targetCellY = (totalOffsetY / cellHeightPx).toInt().coerceIn(0, rows - 1)
-
-                                            val targetItem = items.find { it.cellX == targetCellX && it.cellY == targetCellY && it.id != item.id }
-
-                                            if (targetItem is LauncherItem.AppItem) {
-                                                onMergeIntoFolder(item, targetItem)
-                                            } else if (targetItem == null) {
-                                                onMoveItem(item.id, targetCellX, targetCellY)
+                                        var isDragCompleted = false
+                                        try {
+                                            drag(longPress.id) { change ->
+                                                change.consume()
+                                                dragOffset += change.positionChange()
                                             }
-                                        }
+                                            isDragCompleted = true
+                                        } finally {
+                                            if (isDragCompleted) {
+                                                val totalOffsetX = with(density) { baseOffsetX.toPx() } + dragOffset.x
+                                                val totalOffsetY = with(density) { baseOffsetY.toPx() } + dragOffset.y
 
-                                        draggedItemId = null
-                                        dragOffset = Offset.Zero
-                                        totalDragDistance = 0f
-                                    },
-                                    onDragCancel = {
-                                        draggedItemId = null
-                                        dragOffset = Offset.Zero
-                                        totalDragDistance = 0f
+                                                if (totalOffsetY < 90f) {
+                                                    onRemoveItem(item.id)
+                                                } else {
+                                                    val targetCellX = (totalOffsetX / cellWidthPx).toInt().coerceIn(0, columns - 1)
+                                                    val targetCellY = (totalOffsetY / cellHeightPx).toInt().coerceIn(0, rows - 1)
+
+                                                    val targetItem = items.find { it.cellX == targetCellX && it.cellY == targetCellY && it.id != item.id }
+
+                                                    if (targetItem is LauncherItem.AppItem) {
+                                                        onMergeIntoFolder(item, targetItem)
+                                                    } else if (targetItem == null) {
+                                                        onMoveItem(item.id, targetCellX, targetCellY)
+                                                    }
+                                                }
+                                            }
+                                            draggedItemId = null
+                                            dragOffset = Offset.Zero
+                                        }
+                                    } else {
+                                        // Tap -> Open app
+                                        onAppClick(item.packageName, item.activityName)
                                     }
-                                )
+                                }
                             },
                         contentAlignment = Alignment.Center
                     ) {
@@ -154,16 +210,8 @@ fun GridCellLayout(
                             shape = iconShape,
                             showLabel = showLabels,
                             badgeCount = notificationCounts[item.packageName] ?: 0,
-                            onClick = { onAppClick(item.packageName, item.activityName) },
+                            onClick = null,
                             onLongClick = null
-                        )
-
-                        HomeItemContextMenu(
-                            expanded = menuExpanded,
-                            onDismissRequest = { menuExpanded = false },
-                            onRemoveFromHome = { onRemoveItem(item.id) },
-                            onAppInfo = { onAppInfo(item.packageName) },
-                            onUninstall = { onUninstall(item.packageName) }
                         )
                     }
                 }
@@ -173,35 +221,45 @@ fun GridCellLayout(
                         modifier = itemModifier
                             .size(width = cellWidth * item.spanX, height = cellHeight * item.spanY)
                             .pointerInput(item.id) {
-                                detectDragGesturesAfterLongPress(
-                                    onDragStart = {
+                                awaitEachGesture {
+                                    val down = awaitFirstDown(requireUnconsumed = false)
+                                    val longPress = awaitLongPressOrCancellation(down.id)
+                                    if (longPress != null) {
+                                        // Long press -> Start dragging folder
                                         draggedItemId = item.id
                                         dragOffset = Offset.Zero
-                                    },
-                                    onDrag = { change, dragAmount ->
-                                        change.consume()
-                                        dragOffset += dragAmount
-                                    },
-                                    onDragEnd = {
-                                        val totalOffsetX = with(density) { baseOffsetX.toPx() } + dragOffset.x
-                                        val totalOffsetY = with(density) { baseOffsetY.toPx() } + dragOffset.y
+                                        var isDragCompleted = false
+                                        try {
+                                            drag(longPress.id) { change ->
+                                                change.consume()
+                                                dragOffset += change.positionChange()
+                                            }
+                                            isDragCompleted = true
+                                        } finally {
+                                            if (isDragCompleted) {
+                                                val totalOffsetX = with(density) { baseOffsetX.toPx() } + dragOffset.x
+                                                val totalOffsetY = with(density) { baseOffsetY.toPx() } + dragOffset.y
 
-                                        val targetCellX = (totalOffsetX / cellWidthPx).toInt().coerceIn(0, columns - 1)
-                                        val targetCellY = (totalOffsetY / cellHeightPx).toInt().coerceIn(0, rows - 1)
+                                                if (totalOffsetY < 90f) {
+                                                    onRemoveItem(item.id)
+                                                } else {
+                                                    val targetCellX = (totalOffsetX / cellWidthPx).toInt().coerceIn(0, columns - 1)
+                                                    val targetCellY = (totalOffsetY / cellHeightPx).toInt().coerceIn(0, rows - 1)
 
-                                        val isOccupied = items.any { it.cellX == targetCellX && it.cellY == targetCellY && it.id != item.id }
-                                        if (!isOccupied) {
-                                            onMoveItem(item.id, targetCellX, targetCellY)
+                                                    val isOccupied = items.any { it.cellX == targetCellX && it.cellY == targetCellY && it.id != item.id }
+                                                    if (!isOccupied) {
+                                                        onMoveItem(item.id, targetCellX, targetCellY)
+                                                    }
+                                                }
+                                            }
+                                            draggedItemId = null
+                                            dragOffset = Offset.Zero
                                         }
-
-                                        draggedItemId = null
-                                        dragOffset = Offset.Zero
-                                    },
-                                    onDragCancel = {
-                                        draggedItemId = null
-                                        dragOffset = Offset.Zero
+                                    } else {
+                                        // Tap -> Open folder
+                                        onFolderClick(item)
                                     }
-                                )
+                                }
                             },
                         contentAlignment = Alignment.Center
                     ) {
@@ -213,9 +271,74 @@ fun GridCellLayout(
                     }
                 }
 
-                else -> {
-                    // System widgets
+                is LauncherItem.WidgetItem -> {
+                    Box(
+                        modifier = itemModifier
+                            .size(width = cellWidth * item.spanX, height = cellHeight * item.spanY)
+                            .clip(RoundedCornerShape(16.dp))
+                            .pointerInput(item.id) {
+                                awaitEachGesture {
+                                    val down = awaitFirstDown(requireUnconsumed = false)
+                                    val longPress = awaitLongPressOrCancellation(down.id)
+                                    if (longPress != null) {
+                                        // Long press -> Drag widget
+                                        draggedItemId = item.id
+                                        dragOffset = Offset.Zero
+                                        var isDragCompleted = false
+                                        try {
+                                            drag(longPress.id) { change ->
+                                                change.consume()
+                                                dragOffset += change.positionChange()
+                                            }
+                                            isDragCompleted = true
+                                        } finally {
+                                            if (isDragCompleted) {
+                                                val totalOffsetX = with(density) { baseOffsetX.toPx() } + dragOffset.x
+                                                val totalOffsetY = with(density) { baseOffsetY.toPx() } + dragOffset.y
+
+                                                if (totalOffsetY < 90f) {
+                                                    onRemoveItem(item.id)
+                                                } else {
+                                                    val targetCellX = (totalOffsetX / cellWidthPx).toInt().coerceIn(0, columns - item.spanX)
+                                                    val targetCellY = (totalOffsetY / cellHeightPx).toInt().coerceIn(0, rows - item.spanY)
+
+                                                    val isOccupied = items.any {
+                                                        it.id != item.id &&
+                                                        it.cellX < (targetCellX + item.spanX) && (it.cellX + it.spanX) > targetCellX &&
+                                                        it.cellY < (targetCellY + item.spanY) && (it.cellY + it.spanY) > targetCellY
+                                                    }
+                                                    if (!isOccupied) {
+                                                        onMoveItem(item.id, targetCellX, targetCellY)
+                                                    }
+                                                }
+                                            }
+                                            draggedItemId = null
+                                            dragOffset = Offset.Zero
+                                        }
+                                    }
+                                }
+                            }
+                    ) {
+                        if (widgetHost != null && item.appWidgetId != -1) {
+                            SystemWidgetView(
+                                appWidgetId = item.appWidgetId,
+                                widgetHost = widgetHost,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(Color.White.copy(alpha = 0.1f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("Widget", color = Color.White)
+                            }
+                        }
+                    }
                 }
+
+                else -> {}
             }
         }
     }

@@ -144,15 +144,42 @@ fun FolderModalDialog(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     items(folder.items, key = { it.packageName + it.activityName }) { appItem ->
-                        AosAppIcon(
-                            label = appItem.customLabel ?: appItem.label,
-                            packageName = appItem.packageName,
-                            showLabel = true,
-                            onClick = {
-                                onDismiss()
-                                onAppClick(appItem.packageName, appItem.activityName)
+                        var isContextMenuOpen by remember { mutableStateOf(false) }
+
+                        Box(contentAlignment = Alignment.Center) {
+                            AosAppIcon(
+                                label = appItem.customLabel ?: appItem.label,
+                                packageName = appItem.packageName,
+                                showLabel = true,
+                                onClick = {
+                                    onDismiss()
+                                    onAppClick(appItem.packageName, appItem.activityName)
+                                },
+                                onLongClick = {
+                                    isContextMenuOpen = true
+                                }
+                            )
+
+                            androidx.compose.material3.DropdownMenu(
+                                expanded = isContextMenuOpen,
+                                onDismissRequest = { isContextMenuOpen = false }
+                            ) {
+                                androidx.compose.material3.DropdownMenuItem(
+                                    text = { Text("Klasörden Çıkar") },
+                                    leadingIcon = {
+                                        Icon(
+                                            imageVector = Icons.Default.Delete,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.error
+                                        )
+                                    },
+                                    onClick = {
+                                        isContextMenuOpen = false
+                                        onRemoveAppFromFolder(appItem)
+                                    }
+                                )
                             }
-                        )
+                        }
                     }
                 }
             }

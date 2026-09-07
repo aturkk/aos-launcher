@@ -30,6 +30,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -113,10 +114,9 @@ class SettingsViewModel @Inject constructor(
 
     private fun checkAutoUpdateOnStartup() {
         viewModelScope.launch {
-            appUpdateRepository.isAutoUpdateCheckEnabled.collect { isAuto ->
-                if (isAuto && appUpdateRepository.updateStatus.value is UpdateStatus.Idle) {
-                    appUpdateRepository.checkForUpdates()
-                }
+            val isAuto = appUpdateRepository.isAutoUpdateCheckEnabled.first()
+            if (isAuto && appUpdateRepository.updateStatus.value is UpdateStatus.Idle) {
+                appUpdateRepository.checkForUpdates()
             }
         }
     }
@@ -274,6 +274,10 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             appUpdateRepository.downloadAndInstallUpdate(updateInfo)
         }
+    }
+
+    fun installApk(apkFile: java.io.File) {
+        appUpdateRepository.installApk(apkFile)
     }
 
     fun setAutoUpdateEnabled(enabled: Boolean) {

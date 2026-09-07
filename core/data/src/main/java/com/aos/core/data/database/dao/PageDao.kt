@@ -18,6 +18,9 @@ interface PageDao {
     @Query("DELETE FROM launcher_pages WHERE pageIndex = :pageIndex")
     suspend fun deletePage(pageIndex: Int)
 
+    @Query("UPDATE launcher_pages SET pageIndex = pageIndex - 1 WHERE pageIndex > :deletedIndex")
+    suspend fun decrementPageIndicesAbove(deletedIndex: Int)
+
     @Query("SELECT COUNT(*) FROM launcher_pages")
     suspend fun getPageCount(): Int
 

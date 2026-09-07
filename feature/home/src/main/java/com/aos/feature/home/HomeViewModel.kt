@@ -161,6 +161,52 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    fun addWidget(appWidgetId: Int, spanX: Int = 2, spanY: Int = 2, targetPageIndex: Int = 0) {
+        viewModelScope.launch {
+            val rows = _uiState.value.userPreferences.gridRows
+            val cols = _uiState.value.userPreferences.gridColumns
+            val currentItems = _uiState.value.itemsByPage[targetPageIndex] ?: emptyList()
+
+            var emptyX = -1
+            var emptyY = -1
+
+            searchLoop@ for (r in 0..(rows - spanY).coerceAtLeast(0)) {
+                for (c in 0..(cols - spanX).coerceAtLeast(0)) {
+                    val isOccupied = currentItems.any { item ->
+                        val overlapX = c < (item.cellX + item.spanX) && (c + spanX) > item.cellX
+                        val overlapY = r < (item.cellY + item.spanY) && (r + spanY) > item.cellY
+                        overlapX && overlapY
+                    }
+                    if (!isOccupied) {
+                        emptyX = c
+                        emptyY = r
+                        break@searchLoop
+                    }
+                }
+            }
+
+            val page = if (emptyX != -1 && emptyY != -1) {
+                targetPageIndex
+            } else {
+                val newPageIndex = _uiState.value.pages.size
+                launcherRepository.addPage(newPageIndex, isHomePage = false)
+                emptyX = 0
+                emptyY = 0
+                newPageIndex
+            }
+
+            val widget = LauncherItem.WidgetItem(
+                pageIndex = page,
+                cellX = emptyX,
+                cellY = emptyY,
+                spanX = spanX,
+                spanY = spanY,
+                appWidgetId = appWidgetId
+            )
+            launcherRepository.saveItem(widget)
+        }
+    }
+
     fun deletePage(pageIndex: Int) {
         viewModelScope.launch {
             launcherRepository.deletePage(pageIndex)

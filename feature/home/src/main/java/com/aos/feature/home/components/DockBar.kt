@@ -41,13 +41,16 @@ fun DockBar(
             .background(Color.Black.copy(alpha = 0.25f)),
         contentAlignment = Alignment.Center
     ) {
+        val context = androidx.compose.ui.platform.LocalContext.current
+
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically
         ) {
+
             // Default Phone Shortcut
-            IconButton(onClick = { onAppClick("com.android.dialer", "") }) {
+            IconButton(onClick = { com.aos.core.common.util.LauncherSystemActions.openDialer(context) }) {
                 Icon(
                     imageVector = Icons.Default.Call,
                     contentDescription = "Telefon",
@@ -56,7 +59,7 @@ fun DockBar(
             }
 
             // Default Browser Shortcut
-            IconButton(onClick = { onAppClick("com.android.chrome", "") }) {
+            IconButton(onClick = { com.aos.core.common.util.LauncherSystemActions.openBrowser(context) }) {
                 Icon(
                     imageVector = Icons.Default.Language,
                     contentDescription = "Tarayıcı",
@@ -74,7 +77,7 @@ fun DockBar(
             }
 
             // Default Messages Shortcut
-            IconButton(onClick = { onAppClick("com.google.android.apps.messaging", "") }) {
+            IconButton(onClick = { com.aos.core.common.util.LauncherSystemActions.openMessaging(context) }) {
                 Icon(
                     imageVector = Icons.Default.Email,
                     contentDescription = "Mesajlar",
@@ -83,7 +86,7 @@ fun DockBar(
             }
 
             // Default Camera Shortcut
-            IconButton(onClick = { onAppClick("com.android.camera", "") }) {
+            IconButton(onClick = { com.aos.core.common.util.LauncherSystemActions.openCamera(context) }) {
                 Icon(
                     imageVector = Icons.Default.Camera,
                     contentDescription = "Kamera",

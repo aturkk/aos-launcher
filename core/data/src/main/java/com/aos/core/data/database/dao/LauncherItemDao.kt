@@ -34,6 +34,9 @@ interface LauncherItemDao {
     @Query("DELETE FROM launcher_items WHERE pageIndex = :pageIndex")
     suspend fun deleteItemsOnPage(pageIndex: Int)
 
+    @Query("UPDATE launcher_items SET pageIndex = pageIndex - 1 WHERE pageIndex > :deletedIndex")
+    suspend fun decrementPageIndicesAbove(deletedIndex: Int)
+
     @Query("DELETE FROM launcher_items")
     suspend fun clearAll()
 

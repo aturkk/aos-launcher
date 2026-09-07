@@ -310,6 +310,7 @@ fun SettingsScreen(
                 isAutoUpdateEnabled = isAutoUpdateEnabled,
                 onCheckForUpdates = viewModel::checkForUpdates,
                 onDownloadAndInstall = viewModel::downloadAndInstallUpdate,
+                onInstallApk = viewModel::installApk,
                 onToggleAutoUpdate = viewModel::setAutoUpdateEnabled
             )
 

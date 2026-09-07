@@ -45,9 +45,9 @@ class AppUpdateRepositoryImpl @Inject constructor(
     private fun getCurrentVersionName(): String {
         return try {
             val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
-            packageInfo.versionName ?: "1.4.2"
+            packageInfo.versionName ?: "1.4.3"
         } catch (_: Exception) {
-            "1.4.2"
+            "1.4.3"
         }
     }
 
