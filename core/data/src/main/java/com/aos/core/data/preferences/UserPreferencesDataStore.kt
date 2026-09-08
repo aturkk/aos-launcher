@@ -58,6 +58,7 @@ class UserPreferencesDataStore @Inject constructor(
         val VAULT_PIN = stringPreferencesKey("vault_pin")
         val ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
         val AUTO_UPDATE_CHECK = booleanPreferencesKey("auto_update_check")
+        val DISABLED_PLUGINS = stringSetPreferencesKey("disabled_plugins")
     }
 
     val userPreferences: Flow<UserPreferences> = context.dataStore.data.map { preferences ->
@@ -241,6 +242,12 @@ class UserPreferencesDataStore @Inject constructor(
         }
     }
 
+    suspend fun setHiddenPackages(packages: Set<String>) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.HIDDEN_PACKAGES] = packages
+        }
+    }
+
     suspend fun setVaultPin(pin: String?) {
         context.dataStore.edit { preferences ->
             if (pin != null) {
@@ -330,6 +337,22 @@ class UserPreferencesDataStore @Inject constructor(
     suspend fun setBlurDepth(depth: Float) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.BLUR_DEPTH] = depth
+        }
+    }
+
+    fun getDisabledPlugins(): Flow<Set<String>> = context.dataStore.data.map { preferences ->
+        preferences[PreferencesKeys.DISABLED_PLUGINS] ?: emptySet()
+    }
+
+    suspend fun setPluginEnabled(pluginId: String, enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            val current = preferences[PreferencesKeys.DISABLED_PLUGINS]?.toMutableSet() ?: mutableSetOf()
+            if (enabled) {
+                current.remove(pluginId)
+            } else {
+                current.add(pluginId)
+            }
+            preferences[PreferencesKeys.DISABLED_PLUGINS] = current
         }
     }
 }

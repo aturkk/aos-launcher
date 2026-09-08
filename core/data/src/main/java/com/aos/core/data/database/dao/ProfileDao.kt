@@ -15,6 +15,9 @@ interface ProfileDao {
     @Query("SELECT * FROM profiles ORDER BY id ASC")
     fun getAllProfiles(): Flow<List<ProfileEntity>>
 
+    @Query("SELECT * FROM profiles ORDER BY id ASC")
+    suspend fun getAllProfilesList(): List<ProfileEntity>
+
     @Query("SELECT * FROM profiles WHERE isActive = 1 LIMIT 1")
     fun getActiveProfile(): Flow<ProfileEntity?>
 
@@ -38,6 +41,9 @@ interface ProfileDao {
 
     @Query("UPDATE profiles SET isActive = 1 WHERE id = :id")
     suspend fun activateById(id: Long)
+
+    @Query("DELETE FROM profiles")
+    suspend fun clearAll()
 
     @Transaction
     suspend fun switchActiveProfile(id: Long) {

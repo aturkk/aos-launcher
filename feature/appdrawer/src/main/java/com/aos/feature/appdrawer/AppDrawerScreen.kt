@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.CircularProgressIndicator
 import com.aos.feature.appdrawer.components.HiddenVaultDialog
 import androidx.compose.material3.Icon
@@ -33,7 +34,10 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.ui.text.style.TextAlign
+import com.aos.core.ui.theme.getIconShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -71,9 +75,10 @@ fun AppDrawerScreen(
     val coroutineScope = rememberCoroutineScope()
     var isVaultOpen by remember { mutableStateOf(false) }
     var selectedCategory by remember { mutableStateOf(com.aos.core.domain.model.AppCategory.All) }
+    var contextMenuApp by remember { mutableStateOf<AppInfo?>(null) }
 
-    val displayedApps = remember(uiState.filteredApps, selectedCategory) {
-        if (selectedCategory == com.aos.core.domain.model.AppCategory.All) {
+    val displayedApps = remember(uiState.filteredApps, selectedCategory, uiState.searchQuery) {
+        if (uiState.searchQuery.isNotBlank() || selectedCategory == com.aos.core.domain.model.AppCategory.All) {
             uiState.filteredApps
         } else {
             uiState.filteredApps.filter { it.category == selectedCategory }
@@ -219,7 +224,8 @@ fun AppDrawerScreen(
                 if (uiState.suggestedApps.isNotEmpty() && uiState.searchQuery.isBlank() && selectedCategory == com.aos.core.domain.model.AppCategory.All) {
                     SuggestedAppsRow(
                         suggestions = uiState.suggestedApps,
-                        onAppClick = onAppClick
+                        onAppClick = onAppClick,
+                        iconPackPackage = uiState.selectedIconPackPackage
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                 }
@@ -228,6 +234,78 @@ fun AppDrawerScreen(
                 if (uiState.isLoading) {
                     Box(modifier = Modifier.fillMaxSize().weight(1f), contentAlignment = Alignment.Center) {
                         CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                    }
+                } else if (uiState.errorMessage != null) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .weight(1f)
+                            .padding(24.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.size(48.dp)
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Text(
+                                text = uiState.errorMessage ?: "Uygulamalar yüklenemedi",
+                                color = Color.White,
+                                style = MaterialTheme.typography.bodyLarge,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
+                } else if (displayedApps.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .weight(1f)
+                            .padding(24.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                imageVector = Icons.Default.Search,
+                                contentDescription = null,
+                                tint = Color.Gray,
+                                modifier = Modifier.size(48.dp)
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            if (uiState.searchQuery.isNotBlank()) {
+                                Text(
+                                    text = "\"${uiState.searchQuery}\" için sonuç bulunamadı",
+                                    color = Color.White,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    textAlign = TextAlign.Center
+                                )
+                                Spacer(modifier = Modifier.height(12.dp))
+                                TextButton(onClick = { viewModel.onSearchQueryChanged("") }) {
+                                    Text("Aramayı Temizle", color = MaterialTheme.colorScheme.primary)
+                                }
+                            } else if (selectedCategory != com.aos.core.domain.model.AppCategory.All) {
+                                Text(
+                                    text = "${selectedCategory.title} kategorisinde uygulama bulunamadı",
+                                    color = Color.White,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    textAlign = TextAlign.Center
+                                )
+                                Spacer(modifier = Modifier.height(12.dp))
+                                TextButton(onClick = { selectedCategory = com.aos.core.domain.model.AppCategory.All }) {
+                                    Text("Tüm Uygulamaları Göster", color = MaterialTheme.colorScheme.primary)
+                                }
+                            } else {
+                                Text(
+                                    text = "Yüklü uygulama bulunamadı",
+                                    color = Color.White,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                        }
                     }
                 } else {
                     Row(modifier = Modifier.weight(1f).fillMaxWidth()) {
@@ -243,13 +321,44 @@ fun AppDrawerScreen(
                                 items = displayedApps,
                                 key = { _, app -> app.packageName + app.activityName }
                             ) { _, app ->
-                                AosAppIcon(
-                                    label = app.label,
-                                    packageName = app.packageName,
-                                    activityName = app.activityName,
-                                    onClick = { onAppClick(app.packageName, app.activityName) },
-                                    onLongClick = { onStartPlaceApp(app) }
-                                )
+                                Box {
+                                    AosAppIcon(
+                                        label = app.label,
+                                        packageName = app.packageName,
+                                        activityName = app.activityName,
+                                        iconPackPackage = uiState.selectedIconPackPackage,
+                                        shape = getIconShape(uiState.iconShape),
+                                        onClick = { onAppClick(app.packageName, app.activityName) },
+                                        onLongClick = { contextMenuApp = app }
+                                    )
+
+                                    if (contextMenuApp == app) {
+                                        AppDrawerContextMenu(
+                                            expanded = true,
+                                            onDismissRequest = { contextMenuApp = null },
+                                            onAddToHomeScreen = {
+                                                val target = app
+                                                contextMenuApp = null
+                                                onStartPlaceApp(target)
+                                            },
+                                            onAppInfo = {
+                                                val pkg = app.packageName
+                                                contextMenuApp = null
+                                                onAppInfo(pkg)
+                                            },
+                                            onHideApp = {
+                                                val pkg = app.packageName
+                                                contextMenuApp = null
+                                                viewModel.hideApp(pkg)
+                                            },
+                                            onUninstall = {
+                                                val pkg = app.packageName
+                                                contextMenuApp = null
+                                                onUninstall(pkg)
+                                            }
+                                        )
+                                    }
+                                }
                             }
                         }
 

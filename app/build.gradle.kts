@@ -14,18 +14,24 @@ android {
         applicationId = "com.aos.launcher"
         minSdk = 26
         targetSdk = 35
-        versionCode = 6
-        versionName = "1.5.0"
+        versionCode = 7
+        versionName = "1.5.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     signingConfigs {
         create("shared") {
-            storeFile = file("${rootProject.projectDir}/keystore/aos_launcher.keystore")
-            storePassword = "android"
-            keyAlias = "aoslauncher"
-            keyPassword = "android"
+            val keystorePath = System.getenv("AOS_KEYSTORE_PATH")
+                ?: "${rootProject.projectDir}/keystore/aos_launcher.keystore"
+            val storePass = System.getenv("AOS_KEYSTORE_PASSWORD") ?: "android"
+            val alias = System.getenv("AOS_KEY_ALIAS") ?: "aoslauncher"
+            val keyPass = System.getenv("AOS_KEY_PASSWORD") ?: "android"
+
+            storeFile = file(keystorePath)
+            storePassword = storePass
+            keyAlias = alias
+            keyPassword = keyPass
             enableV1Signing = true
             enableV2Signing = true
         }

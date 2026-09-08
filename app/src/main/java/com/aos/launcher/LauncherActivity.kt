@@ -286,12 +286,30 @@ class LauncherActivity : ComponentActivity() {
                         onExecuteAssistantResult = { result ->
                             when (result.type) {
                                 CommandType.OpenApp -> {
-                                    appDrawerViewModel.recordAppLaunch(result.payload)
-                                    launchApplication(result.payload, "")
+                                    if (homeViewModel.isAppBlockedByActiveProfile(result.payload)) {
+                                        val profile = homeUiState.activeProfile
+                                        Toast.makeText(
+                                            this@LauncherActivity,
+                                            "${profile?.name ?: "Aktif mod"}: Bu uygulama sınırlandırılmıştır.",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    } else {
+                                        appDrawerViewModel.recordAppLaunch(result.payload)
+                                        launchApplication(result.payload, "")
+                                    }
                                 }
                                 CommandType.SwitchProfile -> {
                                     val profileId = result.payload.toLongOrNull() ?: 1L
-                                    homeViewModel.switchProfile(profileId)
+                                    val activeProfile = homeUiState.activeProfile
+                                    if (activeProfile != null && !activeProfile.pinCode.isNullOrBlank() && activeProfile.id != profileId) {
+                                        Toast.makeText(
+                                            this@LauncherActivity,
+                                            "PIN korumalı profilden asistanla doğrudan çıkılamaz. Ayarlar'dan PIN ile değiştirin.",
+                                            Toast.LENGTH_LONG
+                                        ).show()
+                                    } else {
+                                        homeViewModel.switchProfile(profileId)
+                                    }
                                 }
                                 CommandType.Search -> {
                                     val engine = homeUiState.userPreferences.themeConfig.searchEngine
@@ -315,8 +333,17 @@ class LauncherActivity : ComponentActivity() {
                             }
                         },
                         onAppClick = { pkg, activity ->
-                            appDrawerViewModel.recordAppLaunch(pkg)
-                            launchApplication(pkg, activity)
+                            if (homeViewModel.isAppBlockedByActiveProfile(pkg)) {
+                                val profile = homeUiState.activeProfile
+                                Toast.makeText(
+                                    this@LauncherActivity,
+                                    "${profile?.name ?: "Aktif mod"}: Bu uygulama sınırlandırılmıştır.",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            } else {
+                                appDrawerViewModel.recordAppLaunch(pkg)
+                                launchApplication(pkg, activity)
+                            }
                         },
                         onAppInfo = { pkg -> openAppInfo(pkg) },
                         onUninstall = { pkg -> uninstallApp(pkg) }
@@ -378,6 +405,11 @@ class LauncherActivity : ComponentActivity() {
         }
     }
 }
+
+    override fun onResume() {
+        super.onResume()
+        homeViewModelRef?.checkProfileSchedule()
+    }
 
     // L002: AppWidgetHost lifecycle management to prevent memory leaks
     override fun onStart() {

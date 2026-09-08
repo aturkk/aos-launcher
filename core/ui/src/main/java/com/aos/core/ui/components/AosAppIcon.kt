@@ -26,6 +26,9 @@ import androidx.compose.ui.unit.sp
 import com.aos.core.ui.theme.IconLabelShadow
 import com.aos.core.ui.theme.SquircleShape
 
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun AosAppIcon(
@@ -33,6 +36,7 @@ fun AosAppIcon(
     packageName: String = "",
     activityName: String = "",
     iconUri: String? = null,
+    iconPackPackage: String? = null,
     shape: Shape = SquircleShape,
     showLabel: Boolean = true,
     badgeCount: Int = 0,
@@ -49,9 +53,14 @@ fun AosAppIcon(
         Modifier
     }
 
+    val accessibleDescription = if (badgeCount > 0) "$label, $badgeCount bildirim" else label
+
     Column(
         modifier = modifier
             .width(72.dp)
+            .semantics(mergeDescendants = true) {
+                contentDescription = accessibleDescription
+            }
             .then(clickableModifier),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
@@ -68,6 +77,9 @@ fun AosAppIcon(
             ) {
                 AppIconImage(
                     packageName = packageName,
+                    iconPackPackage = iconPackPackage,
+                    iconUri = iconUri,
+                    contentDescription = label,
                     size = 46.dp
                 )
             }

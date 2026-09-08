@@ -48,6 +48,10 @@ class HomeViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
+            profileRepository.checkAndApplySchedule()
+        }
+
+        viewModelScope.launch {
             combine(
                 launcherRepository.getPages(),
                 launcherRepository.getDockItems(),
@@ -167,10 +171,52 @@ class HomeViewModel @Inject constructor(
 
     fun placeAppAt(app: AppInfo, cellX: Int, cellY: Int, pageIndex: Int) {
         viewModelScope.launch {
+            val rows = _uiState.value.userPreferences.gridRows
+            val cols = _uiState.value.userPreferences.gridColumns
+            val currentItems = _uiState.value.itemsByPage[pageIndex] ?: emptyList()
+
+            // Check if cell is occupied by any item (considering item span)
+            val isOccupied = currentItems.any { item ->
+                cellX >= item.cellX && cellX < (item.cellX + item.spanX) &&
+                cellY >= item.cellY && cellY < (item.cellY + item.spanY)
+            }
+
+            var targetX = cellX
+            var targetY = cellY
+
+            if (isOccupied) {
+                // Find nearest empty cell on this page
+                var minDistance = Double.MAX_VALUE
+                var foundEmpty = false
+
+                for (r in 0 until rows) {
+                    for (c in 0 until cols) {
+                        val occupied = currentItems.any { item ->
+                            c >= item.cellX && c < (item.cellX + item.spanX) &&
+                            r >= item.cellY && r < (item.cellY + item.spanY)
+                        }
+                        if (!occupied) {
+                            val dist = Math.hypot((c - cellX).toDouble(), (r - cellY).toDouble())
+                            if (dist < minDistance) {
+                                minDistance = dist
+                                targetX = c
+                                targetY = r
+                                foundEmpty = true
+                            }
+                        }
+                    }
+                }
+
+                if (!foundEmpty) {
+                    findFirstEmptyCellAndAddApp(app, targetPageIndex = pageIndex + 1)
+                    return@launch
+                }
+            }
+
             val newItem = LauncherItem.AppItem(
                 pageIndex = pageIndex,
-                cellX = cellX,
-                cellY = cellY,
+                cellX = targetX,
+                cellY = targetY,
                 spanX = 1,
                 spanY = 1,
                 packageName = app.packageName,
@@ -184,12 +230,56 @@ class HomeViewModel @Inject constructor(
     fun updateGridDimensions(rows: Int, cols: Int) {
         viewModelScope.launch {
             userPreferencesRepository.setGridDimensions(rows, cols)
+            // Re-clamp any items that exceed new boundaries so they don't get pushed off-screen
+            _uiState.value.itemsByPage.forEach { (pageIndex, items) ->
+                items.forEach { item ->
+                    val maxAllowedX = (cols - item.spanX).coerceAtLeast(0)
+                    val maxAllowedY = (rows - item.spanY).coerceAtLeast(0)
+                    val clampedX = item.cellX.coerceAtMost(maxAllowedX)
+                    val clampedY = item.cellY.coerceAtMost(maxAllowedY)
+                    if (clampedX != item.cellX || clampedY != item.cellY) {
+                        launcherRepository.moveItem(item.id, pageIndex, clampedX, clampedY)
+                    }
+                }
+            }
+        }
+    }
+
+    fun autoAlignPage(pageIndex: Int) {
+        viewModelScope.launch {
+            val rows = _uiState.value.userPreferences.gridRows
+            val cols = _uiState.value.userPreferences.gridColumns
+            val currentItems = _uiState.value.itemsByPage[pageIndex] ?: return@launch
+            if (currentItems.isEmpty()) return@launch
+
+            val sorted = currentItems.sortedWith(compareBy({ it.cellY }, { it.cellX }))
+
+            var curC = 0
+            var curR = 0
+
+            sorted.forEach { item ->
+                if (curC + item.spanX > cols) {
+                    curC = 0
+                    curR++
+                }
+
+                if (curR < rows) {
+                    if (item.cellX != curC || item.cellY != curR) {
+                        launcherRepository.moveItem(item.id, pageIndex, curC, curR)
+                    }
+                    curC += item.spanX
+                    if (curC >= cols) {
+                        curC = 0
+                        curR++
+                    }
+                }
+            }
         }
     }
 
     fun addNewPage() {
         viewModelScope.launch {
-            val newIndex = _uiState.value.pages.size
+            val newIndex = _uiState.value.pages.maxOfOrNull { it.pageIndex }?.plus(1) ?: 1
             launcherRepository.addPage(newIndex, isHomePage = false)
         }
     }
@@ -285,18 +375,31 @@ class HomeViewModel @Inject constructor(
 
     fun removeAppFromFolder(folder: LauncherItem.FolderItem, appToRemove: LauncherItem.AppItem) {
         viewModelScope.launch {
-            val remainingApps = folder.items.filter { it.id != appToRemove.id }
-            if (remainingApps.size == 1) {
+            val remainingApps = folder.items.filter {
+                if (it.id != 0L && appToRemove.id != 0L) it.id != appToRemove.id
+                else it.packageName != appToRemove.packageName
+            }
+            if (remainingApps.size <= 1) {
                 launcherRepository.deleteItem(folder.id)
-                val singleApp = remainingApps.first().copy(
-                    pageIndex = folder.pageIndex,
-                    cellX = folder.cellX,
-                    cellY = folder.cellY
-                )
-                launcherRepository.saveItem(singleApp)
+                if (remainingApps.isNotEmpty()) {
+                    val singleApp = remainingApps.first().copy(
+                        pageIndex = folder.pageIndex,
+                        cellX = folder.cellX,
+                        cellY = folder.cellY
+                    )
+                    launcherRepository.saveItem(singleApp)
+                }
             } else {
                 launcherRepository.updateFolder(folder.id, folder.title, remainingApps)
             }
+
+            // Restore the removed app back to the home screen
+            val restoredAppInfo = AppInfo(
+                packageName = appToRemove.packageName,
+                activityName = appToRemove.activityName,
+                label = appToRemove.label
+            )
+            findFirstEmptyCellAndAddApp(restoredAppInfo, targetPageIndex = folder.pageIndex)
         }
     }
 
@@ -457,6 +560,12 @@ class HomeViewModel @Inject constructor(
     fun setOnboardingCompleted(completed: Boolean) {
         viewModelScope.launch {
             userPreferencesRepository.setOnboardingCompleted(completed)
+        }
+    }
+
+    fun checkProfileSchedule() {
+        viewModelScope.launch {
+            profileRepository.checkAndApplySchedule()
         }
     }
 }

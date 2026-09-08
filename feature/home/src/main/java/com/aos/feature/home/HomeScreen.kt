@@ -42,6 +42,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -129,11 +130,44 @@ fun HomeScreen(
     val isCurrentPageHome = pagerState.currentPage in widgetPageOffset until (widgetPageOffset + homePageCount)
     val coroutineScope = rememberCoroutineScope()
 
-    var activeFolder by remember { mutableStateOf<LauncherItem.FolderItem?>(null) }
+    var activeFolderId by remember { mutableStateOf<Long?>(null) }
     var activeStackForEditing by remember { mutableStateOf<LauncherItem.WidgetStackItem?>(null) }
     var activePopupWidgetApp by remember { mutableStateOf<LauncherItem.AppItem?>(null) }
     var isEditMode by remember { mutableStateOf(false) }
     var showGridLayoutPicker by remember { mutableStateOf(false) }
+
+    val currentFolder = remember(uiState.itemsByPage, activeFolderId) {
+        if (activeFolderId == null) null
+        else uiState.itemsByPage.values.flatten().find { it.id == activeFolderId } as? LauncherItem.FolderItem
+    }
+
+    val deleteItemSafely: (Long) -> Unit = { itemId ->
+        val allItems = uiState.itemsByPage.values.flatten()
+        val target = allItems.find { it.id == itemId }
+        when (target) {
+            is LauncherItem.WidgetItem -> {
+                if (target.appWidgetId != -1) {
+                    widgetHost?.deleteAppWidgetId(target.appWidgetId)
+                }
+            }
+            is LauncherItem.WidgetStackItem -> {
+                target.widgets.forEach { w ->
+                    if (w.appWidgetId != -1) {
+                        widgetHost?.deleteAppWidgetId(w.appWidgetId)
+                    }
+                }
+            }
+            is LauncherItem.AppItem -> {
+                target.popupWidgetId?.let { pId ->
+                    if (pId != -1) {
+                        widgetHost?.deleteAppWidgetId(pId)
+                    }
+                }
+            }
+            else -> {}
+        }
+        viewModel.deleteItem(itemId)
+    }
 
     val effectiveEditMode = isEditMode
 
@@ -198,21 +232,35 @@ fun HomeScreen(
             }
             // Swipe gestures: Swipe-down for notifications, Swipe-up for App Drawer
             .pointerInput(isCurrentPageHome, effectiveEditMode) {
-                detectVerticalDragGestures { _, dragAmount ->
-                    if (!effectiveEditMode && isCurrentPageHome) {
-                        if (dragAmount < -45f) {
-                            onOpenAppDrawer()
-                        } else if (dragAmount > 45f) {
-                            onOpenNotifications()
+                var totalDragY = 0f
+                detectVerticalDragGestures(
+                    onDragStart = { totalDragY = 0f },
+                    onDragEnd = { totalDragY = 0f },
+                    onDragCancel = { totalDragY = 0f },
+                    onVerticalDrag = { _, dragAmount ->
+                        if (!effectiveEditMode && isCurrentPageHome) {
+                            totalDragY += dragAmount
+                            if (totalDragY < -75f) {
+                                onOpenAppDrawer()
+                                totalDragY = 0f
+                            } else if (totalDragY > 75f) {
+                                onOpenNotifications()
+                                totalDragY = 0f
+                            }
                         }
                     }
-                }
+                )
             }
             // Pinch-in to enter Edit Mode
             .pointerInput(Unit) {
+                var accumulatedZoom = 1f
                 detectTransformGestures { _, _, zoom, _ ->
-                    if (zoom < 0.85f) {
+                    accumulatedZoom *= zoom
+                    if (accumulatedZoom < 0.82f) {
                         isEditMode = true
+                        accumulatedZoom = 1f
+                    } else if (accumulatedZoom > 1.25f) {
+                        accumulatedZoom = 1f
                     }
                 }
             }
@@ -235,6 +283,12 @@ fun HomeScreen(
                 ) {
                     OxygenEditModeTopBar(
                         onGroupClick = {
+                            val targetPage = if (enableWidgetPage) {
+                                (pagerState.currentPage - 1).coerceAtLeast(0)
+                            } else {
+                                pagerState.currentPage
+                            }
+                            viewModel.autoAlignPage(targetPage)
                             Toast.makeText(context, "Simgeler otomatik hizalandı", Toast.LENGTH_SHORT).show()
                         },
                         onDoneClick = { isEditMode = false }
@@ -428,6 +482,15 @@ fun HomeScreen(
                                         ) {
                                             val mode = uiState.userPreferences.themeConfig.homeLayoutMode
                                             if (homeIndex == 0 && mode != HomeLayoutMode.Grid) {
+                                                // Handle pendingPlacedApp in geometric layouts
+                                                LaunchedEffect(pendingPlacedApp) {
+                                                    if (pendingPlacedApp != null) {
+                                                        viewModel.findFirstEmptyCellAndAddApp(pendingPlacedApp, homeIndex)
+                                                        onClearPendingPlacedApp()
+                                                        Toast.makeText(context, "${pendingPlacedApp.label} ana ekrana yerleştirildi", Toast.LENGTH_SHORT).show()
+                                                    }
+                                                }
+
                                                 when (mode) {
                                                     HomeLayoutMode.Flower -> {
                                                         FlowerLayout(
@@ -436,10 +499,10 @@ fun HomeScreen(
                                                             showLabels = uiState.userPreferences.showAppLabels,
                                                             notificationCounts = activeBadges,
                                                             onAppClick = handleAppClick,
-                                                            onFolderClick = { folder -> activeFolder = folder },
+                                                            onFolderClick = { folder -> activeFolderId = folder.id },
                                                             onEmptySlotClick = onOpenAppDrawer,
                                                             isEditMode = effectiveEditMode,
-                                                            onRemoveItem = viewModel::deleteItem,
+                                                            onRemoveItem = deleteItemSafely,
                                                             onItemLongClick = { isEditMode = true }
                                                         )
                                                     }
@@ -450,10 +513,10 @@ fun HomeScreen(
                                                             showLabels = uiState.userPreferences.showAppLabels,
                                                             notificationCounts = activeBadges,
                                                             onAppClick = handleAppClick,
-                                                            onFolderClick = { folder -> activeFolder = folder },
+                                                            onFolderClick = { folder -> activeFolderId = folder.id },
                                                             onEmptySlotClick = onOpenAppDrawer,
                                                             isEditMode = effectiveEditMode,
-                                                            onRemoveItem = viewModel::deleteItem,
+                                                            onRemoveItem = deleteItemSafely,
                                                             onItemLongClick = { isEditMode = true }
                                                         )
                                                     }
@@ -464,10 +527,10 @@ fun HomeScreen(
                                                             showLabels = uiState.userPreferences.showAppLabels,
                                                             notificationCounts = activeBadges,
                                                             onAppClick = handleAppClick,
-                                                            onFolderClick = { folder -> activeFolder = folder },
+                                                            onFolderClick = { folder -> activeFolderId = folder.id },
                                                             onEmptySlotClick = onOpenAppDrawer,
                                                             isEditMode = effectiveEditMode,
-                                                            onRemoveItem = viewModel::deleteItem,
+                                                            onRemoveItem = deleteItemSafely,
                                                             onItemLongClick = { isEditMode = true }
                                                         )
                                                     }
@@ -489,7 +552,7 @@ fun HomeScreen(
                                                         Toast.makeText(context, "${app.label} ana ekrana yerleştirildi", Toast.LENGTH_SHORT).show()
                                                     },
                                                     onAppClick = handleAppClick,
-                                                    onFolderClick = { folder -> activeFolder = folder },
+                                                    onFolderClick = { folder -> activeFolderId = folder.id },
                                                     onMoveItem = { itemId, x, y -> viewModel.moveItem(itemId, x, y, homeIndex) },
                                                     onMergeIntoFolder = { dragged, target -> viewModel.mergeAppsIntoFolder(dragged, target) },
                                                     onAddToExistingFolder = { dragged, targetFolder -> viewModel.addAppToExistingFolder(dragged, targetFolder) },
@@ -499,8 +562,13 @@ fun HomeScreen(
                                                     onAddWidgetToSingleWidget = { widgetItem -> onAddWidgetToStack(widgetItem.id) },
                                                     onOpenPopupWidget = { app -> activePopupWidgetApp = app },
                                                     onAddPopupWidget = { app -> onAddPopupWidgetToApp(app.id) },
-                                                    onRemovePopupWidget = { app -> viewModel.removeAppPopupWidget(app.id) },
-                                                    onRemoveItem = viewModel::deleteItem,
+                                                    onRemovePopupWidget = { app ->
+                                                        app.popupWidgetId?.let { pId ->
+                                                            if (pId != -1) widgetHost?.deleteAppWidgetId(pId)
+                                                        }
+                                                        viewModel.removeAppPopupWidget(app.id)
+                                                    },
+                                                    onRemoveItem = deleteItemSafely,
                                                     onAppInfo = onAppInfo,
                                                     onUninstall = onUninstall,
                                                     onEmptyAreaLongClick = { isEditMode = true },
@@ -580,12 +648,12 @@ fun HomeScreen(
         }
 
         // Folder Modal Dialog
-        activeFolder?.let { folder ->
+        currentFolder?.let { folder ->
             FolderModalDialog(
                 folder = folder,
-                onDismiss = { activeFolder = null },
+                onDismiss = { activeFolderId = null },
                 onAppClick = { pkg, act ->
-                    activeFolder = null
+                    activeFolderId = null
                     handleAppClick(pkg, act)
                 },
                 onUpdateTitle = { newTitle ->
@@ -595,8 +663,8 @@ fun HomeScreen(
                     viewModel.removeAppFromFolder(folder, appToRemove)
                 },
                 onDeleteFolder = {
-                    viewModel.deleteItem(folder.id)
-                    activeFolder = null
+                    deleteItemSafely(folder.id)
+                    activeFolderId = null
                 }
             )
         }
@@ -611,10 +679,20 @@ fun HomeScreen(
                     onAddWidgetToStack(currentStack.id)
                 },
                 onRemoveWidgetFromStack = { widgetId ->
+                    val widget = currentStack.widgets.find { it.id == widgetId }
+                    if (widget != null && widget.appWidgetId != -1) {
+                        widgetHost?.deleteAppWidgetId(widget.appWidgetId)
+                    }
                     viewModel.removeWidgetFromStack(currentStack, widgetId)
+                    if (currentStack.widgets.size <= 2) {
+                        activeStackForEditing = null
+                    }
                 },
                 onDeleteStack = {
-                    viewModel.deleteItem(currentStack.id)
+                    currentStack.widgets.forEach {
+                        if (it.appWidgetId != -1) widgetHost?.deleteAppWidgetId(it.appWidgetId)
+                    }
+                    deleteItemSafely(currentStack.id)
                     activeStackForEditing = null
                 }
             )
@@ -629,6 +707,10 @@ fun HomeScreen(
                     widgetHost = widgetHost,
                     onDismiss = { activePopupWidgetApp = null },
                     onRemovePopupWidget = {
+                        val popupId = currentApp.popupWidgetId
+                        if (popupId != null && popupId != -1) {
+                            widgetHost?.deleteAppWidgetId(popupId)
+                        }
                         viewModel.removeAppPopupWidget(currentApp.id)
                         activePopupWidgetApp = null
                     },

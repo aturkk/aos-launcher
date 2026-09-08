@@ -4,23 +4,31 @@ import com.aos.core.data.plugin.DuckDuckGoSearchPlugin
 import com.aos.core.data.plugin.PluginSecuritySandbox
 import com.aos.core.data.plugin.QuickFlashlightActionPlugin
 import com.aos.core.data.plugin.WeatherWidgetPlugin
+import com.aos.core.data.preferences.UserPreferencesDataStore
 import com.aos.core.domain.model.ActionPlugin
 import com.aos.core.domain.model.AosPlugin
 import com.aos.core.domain.model.PluginPermission
 import com.aos.core.domain.model.SearchPlugin
 import com.aos.core.domain.model.WidgetPlugin
 import com.aos.core.domain.repository.PluginRepository
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class PluginRepositoryImpl @Inject constructor(
-    private val securitySandbox: PluginSecuritySandbox
+    private val securitySandbox: PluginSecuritySandbox,
+    private val preferencesDataStore: UserPreferencesDataStore
 ) : PluginRepository {
+
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     private val _plugins = MutableStateFlow<List<AosPlugin>>(
         listOf(
@@ -30,9 +38,28 @@ class PluginRepositoryImpl @Inject constructor(
         )
     )
 
+    init {
+        scope.launch {
+            preferencesDataStore.getDisabledPlugins().collect { disabledIds ->
+                _plugins.update { currentList ->
+                    currentList.map { plugin ->
+                        val isEnabled = !disabledIds.contains(plugin.manifest.id)
+                        when (plugin) {
+                            is DuckDuckGoSearchPlugin -> DuckDuckGoSearchPlugin(isEnabled = isEnabled)
+                            is WeatherWidgetPlugin -> WeatherWidgetPlugin(isEnabled = isEnabled)
+                            is QuickFlashlightActionPlugin -> QuickFlashlightActionPlugin(isEnabled = isEnabled)
+                            else -> plugin
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     override fun getPlugins(): Flow<List<AosPlugin>> = _plugins.asStateFlow()
 
     override suspend fun togglePlugin(pluginId: String, enabled: Boolean) {
+        preferencesDataStore.setPluginEnabled(pluginId, enabled)
         _plugins.update { currentList ->
             currentList.map { plugin ->
                 if (plugin.manifest.id == pluginId) {

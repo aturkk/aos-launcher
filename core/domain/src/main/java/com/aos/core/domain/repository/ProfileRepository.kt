@@ -10,4 +10,5 @@ interface ProfileRepository {
     suspend fun updateProfile(profile: Profile)
     suspend fun createProfile(profile: Profile): Long
     suspend fun deleteProfile(profileId: Long)
+    suspend fun checkAndApplySchedule(): Boolean
 }

@@ -56,7 +56,9 @@ class AppDrawerViewModel @Inject constructor(
                         mathCalculatorEnabled = prefs.themeConfig.enableMathCalculator,
                         contactsSearchEnabled = prefs.themeConfig.enableContactsSearch,
                         aiSearchChipsEnabled = prefs.themeConfig.enableAiSearchChips,
-                        searchBarAtBottom = prefs.themeConfig.searchBarAtBottom
+                        searchBarAtBottom = prefs.themeConfig.searchBarAtBottom,
+                        iconShape = prefs.themeConfig.iconShape,
+                        selectedIconPackPackage = prefs.themeConfig.selectedIconPackPackage
                     )
                 }
             }
@@ -108,9 +110,18 @@ class AppDrawerViewModel @Inject constructor(
 
     private fun loadAiSuggestions() {
         viewModelScope.launch {
-            aiSuggestionRepository.getSuggestedApps(limit = 5).collect { suggestions ->
+            combine(
+                aiSuggestionRepository.getSuggestedApps(limit = 10),
+                hiddenAppsRepository.getHiddenPackages(),
+                profileRepository.getActiveProfile()
+            ) { suggestions, hiddenPackages, activeProfile ->
+                suggestions
+                    .filterNot { hiddenPackages.contains(it.packageName) }
+                    .filter { activeProfile?.isAppAllowed(it.packageName) ?: true }
+                    .take(5)
+            }.collect { filteredSuggestions ->
                 _uiState.update { current ->
-                    current.copy(suggestedApps = suggestions)
+                    current.copy(suggestedApps = filteredSuggestions)
                 }
             }
         }

@@ -58,6 +58,22 @@ fun ProfileManagementSection(
     modifier: Modifier = Modifier
 ) {
     var editingProfile by remember { mutableStateOf<Profile?>(null) }
+    var pendingProfileToActivate by remember { mutableStateOf<Profile?>(null) }
+    var pinDialogInput by remember { mutableStateOf("") }
+    var pinDialogError by remember { mutableStateOf(false) }
+
+    val activeProfile = profiles.firstOrNull { it.isActive }
+
+    fun requestProfileSwitch(targetProfile: Profile) {
+        if (targetProfile.id == activeProfile?.id) return
+        if (activeProfile != null && !activeProfile.pinCode.isNullOrBlank()) {
+            pendingProfileToActivate = targetProfile
+            pinDialogInput = ""
+            pinDialogError = false
+        } else {
+            onSelectActiveProfile(targetProfile.id)
+        }
+    }
 
     Column(modifier = modifier.fillMaxWidth()) {
         Text(
@@ -70,7 +86,7 @@ fun ProfileManagementSection(
         Text(
             text = "Farklı ortamlara (İş, Odak, Çocuk vb.) göre uygulama erişimlerini ve bildirimleri özelleştirin.",
             style = MaterialTheme.typography.bodySmall,
-            color = Color.Gray
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
         Spacer(modifier = Modifier.height(14.dp))
@@ -78,11 +94,62 @@ fun ProfileManagementSection(
         profiles.forEach { profile ->
             ProfileItemRow(
                 profile = profile,
-                onActivate = { onSelectActiveProfile(profile.id) },
+                onActivate = { requestProfileSwitch(profile) },
                 onEdit = { editingProfile = profile }
             )
             Spacer(modifier = Modifier.height(8.dp))
         }
+    }
+
+    // PIN Challenge Dialog for switching away from PIN-protected profile
+    pendingProfileToActivate?.let { target ->
+        AlertDialog(
+            onDismissRequest = { pendingProfileToActivate = null },
+            title = { Text("Ebeveyn / Profil PIN Doğrulaması") },
+            text = {
+                Column {
+                    Text(
+                        "${activeProfile?.name ?: "Mevcut profil"} modundan çıkmak için lütfen PIN kodunuzu girin.",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value = pinDialogInput,
+                        onValueChange = {
+                            pinDialogInput = it
+                            pinDialogError = false
+                        },
+                        label = { Text("PIN Kodu") },
+                        isError = pinDialogError,
+                        supportingText = if (pinDialogError) {
+                            { Text("Hatalı PIN kodu", color = MaterialTheme.colorScheme.error) }
+                        } else null,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        if (pinDialogInput == activeProfile?.pinCode) {
+                            onSelectActiveProfile(target.id)
+                            pendingProfileToActivate = null
+                        } else {
+                            pinDialogError = true
+                        }
+                    }
+                ) {
+                    Text("Onayla")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingProfileToActivate = null }) {
+                    Text("İptal")
+                }
+            }
+        )
     }
 
     // Profile Edit Dialog
@@ -110,10 +177,13 @@ private fun ProfileItemRow(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
-            .background(if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f) else Color.White.copy(alpha = 0.05f))
+            .background(
+                if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+            )
             .border(
                 width = if (isSelected) 1.5.dp else 1.dp,
-                color = if (isSelected) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.1f),
+                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
                 shape = RoundedCornerShape(14.dp)
             )
             .clickable(onClick = onActivate)
@@ -124,13 +194,16 @@ private fun ProfileItemRow(
             modifier = Modifier
                 .size(40.dp)
                 .clip(CircleShape)
-                .background(if (isSelected) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.1f)),
+                .background(
+                    if (isSelected) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.surfaceVariant
+                ),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = getProfileIcon(profile.type),
                 contentDescription = null,
-                tint = if (isSelected) MaterialTheme.colorScheme.onPrimary else Color.White,
+                tint = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(22.dp)
             )
         }
@@ -142,7 +215,7 @@ private fun ProfileItemRow(
                 Text(
                     text = profile.name,
                     style = MaterialTheme.typography.bodyLarge,
-                    color = if (isSelected) MaterialTheme.colorScheme.primary else Color.White
+                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                 )
                 if (isSelected) {
                     Spacer(modifier = Modifier.width(8.dp))
@@ -172,7 +245,7 @@ private fun ProfileItemRow(
             Text(
                 text = subtitle,
                 style = MaterialTheme.typography.bodySmall,
-                color = Color.Gray
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
 
@@ -180,7 +253,7 @@ private fun ProfileItemRow(
             Icon(
                 imageVector = Icons.Default.Edit,
                 contentDescription = "Düzenle",
-                tint = Color.Gray,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(20.dp)
             )
         }

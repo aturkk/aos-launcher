@@ -10,7 +10,9 @@ data class BackupPayload(
     val items: List<LauncherItem> = emptyList(),
     val profiles: List<Profile> = emptyList(),
     val themeConfig: ThemeConfig = ThemeConfig(),
-    val userPreferences: UserPreferences = UserPreferences()
+    val userPreferences: UserPreferences = UserPreferences(),
+    val hiddenPackages: Set<String> = emptySet(),
+    val vaultPin: String? = null
 )
 
 sealed class SyncStatus {

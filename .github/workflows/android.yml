@@ -34,7 +34,7 @@ jobs:
         run: ./gradlew assembleRelease assembleDebug --stacktrace
 
       - name: Run Unit Tests
-        run: ./gradlew test --stacktrace || true
+        run: ./gradlew test --stacktrace
 
       - name: Prepare APK Asset
         run: |

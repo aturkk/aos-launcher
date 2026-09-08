@@ -351,7 +351,7 @@ private fun SettingsHubView(
         SettingsSubPage.entries.forEach { subPage ->
             Card(
                 colors = CardDefaults.cardColors(
-                    containerColor = Color.White.copy(alpha = 0.05f)
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
                 ),
                 shape = RoundedCornerShape(18.dp),
                 modifier = Modifier
@@ -388,20 +388,20 @@ private fun SettingsHubView(
                             text = subPage.title,
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.Bold,
-                            color = Color.White
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
                             text = subPage.subtitle,
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color.LightGray
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
 
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos,
                         contentDescription = null,
-                        tint = Color.White.copy(alpha = 0.4f),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                         modifier = Modifier.size(16.dp)
                     )
                 }

@@ -34,6 +34,7 @@ class LauncherRepositoryImpl @Inject constructor(
         pageDao.getAllPages()
             .map { list ->
                 if (list.isEmpty()) {
+                    pageDao.insertPage(PageEntity(pageIndex = 0, isHomePage = true))
                     listOf(PageInfo(pageId = 1L, pageIndex = 0, isHomePage = true))
                 } else {
                     list.map { PageInfo(it.pageId, it.pageIndex, it.isHomePage) }

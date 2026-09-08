@@ -10,11 +10,13 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -112,6 +114,34 @@ fun HoneycombLayout(
                 }
             }
         }
+
+        val overflowCount = items.size - slotPositions.size
+        val hasWidgets = items.any { it is LauncherItem.WidgetItem || it is LauncherItem.WidgetStackItem }
+        if (isEditMode && (overflowCount > 0 || hasWidgets)) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 20.dp, start = 16.dp, end = 16.dp)
+                    .background(Color.Black.copy(alpha = 0.8f), RoundedCornerShape(12.dp))
+                    .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.6f), RoundedCornerShape(12.dp))
+                    .padding(horizontal = 12.dp, vertical = 6.dp)
+            ) {
+                val warningText = buildString {
+                    if (overflowCount > 0) {
+                        append("+$overflowCount öğe bu düzene sığmıyor. ")
+                    }
+                    if (hasWidgets) {
+                        append("Widget'lar geometrik düzende desteklenmez. ")
+                    }
+                    append("Izgara moduna geçin.")
+                }
+                Text(
+                    text = warningText,
+                    color = Color.White,
+                    style = MaterialTheme.typography.labelSmall
+                )
+            }
+        }
     }
 }
 
@@ -190,6 +220,34 @@ fun ArchLayout(
                 } else {
                     EmptyGeometricSlot(onClick = onEmptySlotClick)
                 }
+            }
+        }
+
+        val overflowCount = items.size - slotAngles.size
+        val hasWidgets = items.any { it is LauncherItem.WidgetItem || it is LauncherItem.WidgetStackItem }
+        if (isEditMode && (overflowCount > 0 || hasWidgets)) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 20.dp, start = 16.dp, end = 16.dp)
+                    .background(Color.Black.copy(alpha = 0.8f), RoundedCornerShape(12.dp))
+                    .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.6f), RoundedCornerShape(12.dp))
+                    .padding(horizontal = 12.dp, vertical = 6.dp)
+            ) {
+                val warningText = buildString {
+                    if (overflowCount > 0) {
+                        append("+$overflowCount öğe bu düzene sığmıyor. ")
+                    }
+                    if (hasWidgets) {
+                        append("Widget'lar geometrik düzende desteklenmez. ")
+                    }
+                    append("Izgara moduna geçin.")
+                }
+                Text(
+                    text = warningText,
+                    color = Color.White,
+                    style = MaterialTheme.typography.labelSmall
+                )
             }
         }
     }

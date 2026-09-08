@@ -12,6 +12,7 @@ import com.aos.core.data.database.dao.ProfileDao
 import com.aos.core.data.database.entity.LauncherItemEntity
 import com.aos.core.data.database.entity.PageEntity
 import com.aos.core.data.database.entity.ProfileEntity
+import androidx.room.withTransaction
 import com.aos.core.data.preferences.UserPreferencesDataStore
 import com.aos.core.domain.model.BackupPayload
 import com.aos.core.domain.model.DarkModeOption
@@ -54,8 +55,12 @@ class BackupRepositoryImpl @Inject constructor(
     override fun getSyncStatus(): Flow<SyncStatus> = _syncStatus.asStateFlow()
 
     override suspend fun createBackupPayload(): BackupPayload = withContext(ioDispatcher) {
-        val pages = pageDao.getAllPages().firstOrNull()?.map { PageInfo(it.pageId, it.pageIndex, it.isHomePage) }
-            ?: listOf(PageInfo(pageId = 1L, pageIndex = 0, isHomePage = true))
+        val pagesRaw = pageDao.getAllPages().firstOrNull()
+        val pages = if (!pagesRaw.isNullOrEmpty()) {
+            pagesRaw.map { PageInfo(it.pageId, it.pageIndex, it.isHomePage) }
+        } else {
+            listOf(PageInfo(pageId = 1L, pageIndex = 0, isHomePage = true))
+        }
 
         val allItems = mutableListOf<LauncherItem>()
         pages.forEach { page ->
@@ -69,6 +74,8 @@ class BackupRepositoryImpl @Inject constructor(
         val profiles = profileEntities.map { it.toDomain() }
 
         val prefs = userPreferencesDataStore.userPreferences.first()
+        val hiddenPkgs = userPreferencesDataStore.hiddenPackages.first()
+        val pin = userPreferencesDataStore.vaultPin.firstOrNull()
 
         val brand = Build.MANUFACTURER?.replaceFirstChar { it.uppercase() } ?: "Android"
         val model = Build.MODEL ?: "Device"
@@ -81,7 +88,9 @@ class BackupRepositoryImpl @Inject constructor(
             items = allItems,
             profiles = profiles,
             themeConfig = prefs.themeConfig,
-            userPreferences = prefs
+            userPreferences = prefs,
+            hiddenPackages = hiddenPkgs,
+            vaultPin = pin
         )
     }
 
@@ -109,42 +118,45 @@ class BackupRepositoryImpl @Inject constructor(
 
     override suspend fun restorePayload(payload: BackupPayload): Result<Unit> = withContext(ioDispatcher) {
         try {
-            // 1. Clear existing items and pages
-            launcherItemDao.clearAll()
-            pageDao.clearAll()
+            database.withTransaction {
+                // 1. Clear existing items, pages and profiles
+                launcherItemDao.clearAll()
+                pageDao.clearAll()
+                profileDao.clearAll()
 
-            // 2. Insert pages
-            val pageEntities = payload.pages.map {
-                PageEntity(pageId = it.pageId, pageIndex = it.pageIndex, isHomePage = it.isHomePage)
-            }
-            pageDao.insertAll(pageEntities)
+                // 2. Insert pages
+                val pageEntities = payload.pages.map {
+                    PageEntity(pageId = it.pageId, pageIndex = it.pageIndex, isHomePage = it.isHomePage)
+                }
+                pageDao.insertAll(pageEntities)
 
-            // 3. Insert launcher items
-            val itemEntities = payload.items.map { item ->
-                itemToEntity(item)
-            }
-            launcherItemDao.insertAll(itemEntities)
+                // 3. Insert launcher items
+                val itemEntities = payload.items.map { item ->
+                    itemToEntity(item)
+                }
+                launcherItemDao.insertAll(itemEntities)
 
-            // 4. Update / insert profiles
-            val profileEntities = payload.profiles.map { prof ->
-                ProfileEntity(
-                    id = prof.id,
-                    name = prof.name,
-                    type = prof.type.name,
-                    isActive = prof.isActive,
-                    blockedPackagesJson = JSONArray(prof.blockedPackages).toString(),
-                    allowedPackagesJson = JSONArray(prof.allowedPackages).toString(),
-                    pinCode = prof.pinCode,
-                    isScheduleEnabled = prof.isScheduleEnabled,
-                    startHour = prof.startHour,
-                    startMinute = prof.startMinute,
-                    endHour = prof.endHour,
-                    endMinute = prof.endMinute,
-                    iconName = prof.iconName
-                )
-            }
-            if (profileEntities.isNotEmpty()) {
-                profileDao.insertAll(profileEntities)
+                // 4. Update / insert profiles
+                val profileEntities = payload.profiles.map { prof ->
+                    ProfileEntity(
+                        id = prof.id,
+                        name = prof.name,
+                        type = prof.type.name,
+                        isActive = prof.isActive,
+                        blockedPackagesJson = JSONArray(prof.blockedPackages).toString(),
+                        allowedPackagesJson = JSONArray(prof.allowedPackages).toString(),
+                        pinCode = prof.pinCode,
+                        isScheduleEnabled = prof.isScheduleEnabled,
+                        startHour = prof.startHour,
+                        startMinute = prof.startMinute,
+                        endHour = prof.endHour,
+                        endMinute = prof.endMinute,
+                        iconName = prof.iconName
+                    )
+                }
+                if (profileEntities.isNotEmpty()) {
+                    profileDao.insertAll(profileEntities)
+                }
             }
 
             // 5. Restore Preferences & Theme
@@ -155,6 +167,20 @@ class BackupRepositoryImpl @Inject constructor(
             userPreferencesDataStore.setShowAppLabels(payload.userPreferences.showAppLabels)
             userPreferencesDataStore.setDoubleTapToSleep(payload.userPreferences.doubleTapToSleep)
             userPreferencesDataStore.updateThemeConfig(payload.themeConfig)
+            userPreferencesDataStore.setMathCalculatorEnabled(payload.themeConfig.enableMathCalculator)
+            userPreferencesDataStore.setContactsSearchEnabled(payload.themeConfig.enableContactsSearch)
+            userPreferencesDataStore.setAiSearchChipsEnabled(payload.themeConfig.enableAiSearchChips)
+            userPreferencesDataStore.setNewsFeedEnabled(payload.themeConfig.enableNewsFeed)
+            userPreferencesDataStore.setWidgetPageEnabled(payload.themeConfig.enableWidgetPage)
+            userPreferencesDataStore.setSearchBarAtBottom(payload.themeConfig.searchBarAtBottom)
+            userPreferencesDataStore.setClockWidgetEnabled(payload.themeConfig.enableClockWidget)
+            userPreferencesDataStore.setSmartContextCardEnabled(payload.themeConfig.enableSmartContextCard)
+            if (payload.hiddenPackages.isNotEmpty()) {
+                userPreferencesDataStore.setHiddenPackages(payload.hiddenPackages)
+            }
+            if (payload.vaultPin != null) {
+                userPreferencesDataStore.setVaultPin(payload.vaultPin)
+            }
 
             Result.Success(Unit)
         } catch (e: Exception) {
@@ -165,11 +191,10 @@ class BackupRepositoryImpl @Inject constructor(
     override suspend fun syncWithCloud(): Result<Unit> = withContext(ioDispatcher) {
         _syncStatus.value = SyncStatus.Syncing
         try {
-            // Simulate cloud synchronization (zero-knowledge payload push)
-            kotlinx.coroutines.delay(1200)
-            val now = System.currentTimeMillis()
-            _syncStatus.value = SyncStatus.Success(now)
-            Result.Success(Unit)
+            kotlinx.coroutines.delay(400)
+            val msg = "Bulut eşitlemesi için harici bulut hesabı (Google Drive / WebDAV) yapılandırılmalıdır."
+            _syncStatus.value = SyncStatus.Error(msg)
+            Result.Error(Exception(msg))
         } catch (e: Exception) {
             _syncStatus.value = SyncStatus.Error(e.localizedMessage ?: "Senkronizasyon hatası")
             Result.Error(e)
@@ -311,9 +336,22 @@ class BackupRepositoryImpl @Inject constructor(
         tcObj.put("hideStatusBar", tc.hideStatusBar)
         tcObj.put("hideNavigationBar", tc.hideNavigationBar)
         tcObj.put("blurDepth", tc.blurDepth.toDouble())
+        tcObj.put("enableMathCalculator", tc.enableMathCalculator)
+        tcObj.put("enableContactsSearch", tc.enableContactsSearch)
+        tcObj.put("enableAiSearchChips", tc.enableAiSearchChips)
+        tcObj.put("enableNewsFeed", tc.enableNewsFeed)
+        tcObj.put("enableWidgetPage", tc.enableWidgetPage)
+        tcObj.put("searchBarAtBottom", tc.searchBarAtBottom)
+        tcObj.put("enableClockWidget", tc.enableClockWidget)
+        tcObj.put("enableSmartContextCard", tc.enableSmartContextCard)
         prefsObj.put("themeConfig", tcObj)
 
         root.put("userPreferences", prefsObj)
+
+        val hiddenArr = JSONArray()
+        payload.hiddenPackages.forEach { hiddenArr.put(it) }
+        root.put("hiddenPackages", hiddenArr)
+        payload.vaultPin?.let { root.put("vaultPin", it) }
 
         return root.toString()
     }
@@ -405,6 +443,39 @@ class BackupRepositoryImpl @Inject constructor(
                             )
                         )
                     }
+                    "WIDGET_STACK" -> {
+                        val subWidgets = mutableListOf<LauncherItem.WidgetItem>()
+                        val subArr = iObj.optJSONArray("widgets")
+                        if (subArr != null) {
+                            for (j in 0 until subArr.length()) {
+                                val sObj = subArr.getJSONObject(j)
+                                subWidgets.add(
+                                    LauncherItem.WidgetItem(
+                                        id = sObj.optLong("id", 0L),
+                                        pageIndex = pageIndex,
+                                        cellX = cellX,
+                                        cellY = cellY,
+                                        spanX = sObj.optInt("spanX", spanX),
+                                        spanY = sObj.optInt("spanY", spanY),
+                                        appWidgetId = sObj.optInt("appWidgetId", -1),
+                                        providerPackage = sObj.optString("providerPackage", ""),
+                                        providerClass = sObj.optString("providerClass", "")
+                                    )
+                                )
+                            }
+                        }
+                        items.add(
+                            LauncherItem.WidgetStackItem(
+                                id = id,
+                                pageIndex = pageIndex,
+                                cellX = cellX,
+                                cellY = cellY,
+                                spanX = spanX,
+                                spanY = spanY,
+                                widgets = subWidgets
+                            )
+                        )
+                    }
                     "SHORTCUT" -> {
                         items.add(
                             LauncherItem.ShortcutItem(
@@ -433,7 +504,8 @@ class BackupRepositoryImpl @Inject constructor(
                                 activityName = iObj.optString("activityName", ""),
                                 label = iObj.optString("label", ""),
                                 customLabel = if (iObj.has("customLabel")) iObj.getString("customLabel") else null,
-                                customIconUri = if (iObj.has("customIconUri")) iObj.getString("customIconUri") else null
+                                customIconUri = if (iObj.has("customIconUri")) iObj.getString("customIconUri") else null,
+                                popupWidgetId = if (iObj.has("popupWidgetId")) iObj.optInt("popupWidgetId") else null
                             )
                         )
                     }
@@ -511,6 +583,14 @@ class BackupRepositoryImpl @Inject constructor(
         val hideStatusBar = tcObj?.optBoolean("hideStatusBar", false) ?: false
         val hideNavigationBar = tcObj?.optBoolean("hideNavigationBar", false) ?: false
         val blurDepth = (tcObj?.optDouble("blurDepth", 0.6) ?: 0.6).toFloat()
+        val enableMathCalculator = tcObj?.optBoolean("enableMathCalculator", true) ?: true
+        val enableContactsSearch = tcObj?.optBoolean("enableContactsSearch", true) ?: true
+        val enableAiSearchChips = tcObj?.optBoolean("enableAiSearchChips", true) ?: true
+        val enableNewsFeed = tcObj?.optBoolean("enableNewsFeed", true) ?: true
+        val enableWidgetPage = tcObj?.optBoolean("enableWidgetPage", true) ?: true
+        val searchBarAtBottom = tcObj?.optBoolean("searchBarAtBottom", false) ?: false
+        val enableClockWidget = tcObj?.optBoolean("enableClockWidget", true) ?: true
+        val enableSmartContextCard = tcObj?.optBoolean("enableSmartContextCard", true) ?: true
 
         val themeConfig = ThemeConfig(
             darkMode = darkMode,
@@ -526,7 +606,15 @@ class BackupRepositoryImpl @Inject constructor(
             homeLayoutMode = homeLayoutMode,
             hideStatusBar = hideStatusBar,
             hideNavigationBar = hideNavigationBar,
-            blurDepth = blurDepth
+            blurDepth = blurDepth,
+            enableMathCalculator = enableMathCalculator,
+            enableContactsSearch = enableContactsSearch,
+            enableAiSearchChips = enableAiSearchChips,
+            enableNewsFeed = enableNewsFeed,
+            enableWidgetPage = enableWidgetPage,
+            searchBarAtBottom = searchBarAtBottom,
+            enableClockWidget = enableClockWidget,
+            enableSmartContextCard = enableSmartContextCard
         )
 
         val userPreferences = UserPreferences(
@@ -537,6 +625,15 @@ class BackupRepositoryImpl @Inject constructor(
             themeConfig = themeConfig
         )
 
+        val hiddenPkgs = mutableSetOf<String>()
+        val hiddenArr = root.optJSONArray("hiddenPackages")
+        if (hiddenArr != null) {
+            for (h in 0 until hiddenArr.length()) {
+                hiddenPkgs.add(hiddenArr.getString(h))
+            }
+        }
+        val vaultPin = if (root.has("vaultPin")) root.getString("vaultPin") else null
+
         return BackupPayload(
             version = version,
             createdAt = createdAt,
@@ -545,7 +642,9 @@ class BackupRepositoryImpl @Inject constructor(
             items = items,
             profiles = profiles,
             themeConfig = themeConfig,
-            userPreferences = userPreferences
+            userPreferences = userPreferences,
+            hiddenPackages = hiddenPkgs,
+            vaultPin = vaultPin
         )
     }
 

@@ -31,17 +31,20 @@ import com.aos.core.ui.theme.SquircleShape
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
+import android.net.Uri
+import androidx.core.content.res.ResourcesCompat
+
 // Bounded LruCache icon cache to prevent OOM while keeping fast scrolling
 object AppIconCache {
     private const val MAX_CACHE_ENTRIES = 400
     private val lruCache = LruCache<String, Bitmap>(MAX_CACHE_ENTRIES)
 
     @Synchronized
-    fun get(packageName: String): Bitmap? = lruCache.get(packageName)
+    fun get(key: String): Bitmap? = lruCache.get(key)
 
     @Synchronized
-    fun put(packageName: String, bitmap: Bitmap) {
-        lruCache.put(packageName, bitmap)
+    fun put(key: String, bitmap: Bitmap) {
+        lruCache.put(key, bitmap)
     }
 
     @Synchronized
@@ -59,14 +62,24 @@ object AppIconCache {
 fun AppIconImage(
     packageName: String,
     modifier: Modifier = Modifier,
+    iconPackPackage: String? = null,
+    iconUri: String? = null,
+    contentDescription: String? = null,
     size: Dp = 44.dp
 ) {
     val context = LocalContext.current
-    val cachedBitmap = remember(packageName) { AppIconCache.get(packageName) }
-    val bitmapState = produceState(initialValue = cachedBitmap, key1 = packageName) {
+    val cacheKey = remember(packageName, iconPackPackage, iconUri) {
+        when {
+            !iconUri.isNullOrBlank() -> "uri:$iconUri"
+            !iconPackPackage.isNullOrBlank() -> "pack:$iconPackPackage:$packageName"
+            else -> packageName
+        }
+    }
+    val cachedBitmap = remember(cacheKey) { AppIconCache.get(cacheKey) }
+    val bitmapState = produceState(initialValue = cachedBitmap, key1 = cacheKey) {
         if (value == null && packageName.isNotBlank()) {
             val loaded = withContext(Dispatchers.IO) {
-                loadAppIconBitmap(context, packageName)
+                loadAppIconBitmap(context, packageName, iconPackPackage, iconUri)
             }
             value = loaded
         }
@@ -76,7 +89,7 @@ fun AppIconImage(
     if (bitmap != null) {
         Image(
             bitmap = bitmap.asImageBitmap(),
-            contentDescription = null,
+            contentDescription = contentDescription,
             modifier = modifier.size(size)
         )
     } else {
@@ -89,7 +102,7 @@ fun AppIconImage(
         ) {
             Icon(
                 imageVector = Icons.Default.Android,
-                contentDescription = null,
+                contentDescription = contentDescription,
                 tint = Color.White.copy(alpha = 0.4f),
                 modifier = Modifier.size(size * 0.55f)
             )
@@ -97,16 +110,50 @@ fun AppIconImage(
     }
 }
 
-internal fun loadAppIconBitmap(context: Context, packageName: String): Bitmap? {
+internal fun loadAppIconBitmap(
+    context: Context,
+    packageName: String,
+    iconPackPackage: String? = null,
+    iconUri: String? = null
+): Bitmap? {
     if (packageName.isBlank()) return null
-    AppIconCache.get(packageName)?.let { return it }
+    val cacheKey = when {
+        !iconUri.isNullOrBlank() -> "uri:$iconUri"
+        !iconPackPackage.isNullOrBlank() -> "pack:$iconPackPackage:$packageName"
+        else -> packageName
+    }
+    AppIconCache.get(cacheKey)?.let { return it }
 
     return try {
-        val pm = context.packageManager
-        val drawable = pm.getApplicationIcon(packageName)
+        val drawable = when {
+            !iconUri.isNullOrBlank() -> {
+                val uri = Uri.parse(iconUri)
+                val stream = context.contentResolver.openInputStream(uri)
+                val bmp = android.graphics.BitmapFactory.decodeStream(stream)
+                stream?.close()
+                if (bmp != null) BitmapDrawable(context.resources, bmp) else null
+            }
+            !iconPackPackage.isNullOrBlank() -> {
+                try {
+                    val iconPackRes = context.packageManager.getResourcesForApplication(iconPackPackage)
+                    val formatted = packageName.replace(".", "_").lowercase()
+                    var resId = iconPackRes.getIdentifier(formatted, "drawable", iconPackPackage)
+                    if (resId == 0) {
+                        resId = iconPackRes.getIdentifier("icon_$formatted", "drawable", iconPackPackage)
+                    }
+                    if (resId != 0) {
+                        ResourcesCompat.getDrawable(iconPackRes, resId, null)
+                    } else null
+                } catch (_: Exception) {
+                    null
+                }
+            }
+            else -> null
+        } ?: context.packageManager.getApplicationIcon(packageName)
+
         val bitmap = drawableToBitmap(drawable)
         if (bitmap != null) {
-            AppIconCache.put(packageName, bitmap)
+            AppIconCache.put(cacheKey, bitmap)
         }
         bitmap
     } catch (_: Exception) {

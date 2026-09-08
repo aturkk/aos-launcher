@@ -21,5 +21,7 @@ data class AppDrawerUiState(
     val mathCalculatorEnabled: Boolean = true,
     val contactsSearchEnabled: Boolean = true,
     val aiSearchChipsEnabled: Boolean = true,
-    val searchBarAtBottom: Boolean = false
+    val searchBarAtBottom: Boolean = false,
+    val iconShape: com.aos.core.domain.model.IconShapeOption = com.aos.core.domain.model.IconShapeOption.Squircle,
+    val selectedIconPackPackage: String? = null
 )

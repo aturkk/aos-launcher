@@ -36,6 +36,7 @@ import com.aos.core.ui.components.AppIconImage
 fun SuggestedAppsRow(
     suggestions: List<AppSuggestion>,
     onAppClick: (packageName: String, activityName: String) -> Unit,
+    iconPackPackage: String? = null,
     modifier: Modifier = Modifier
 ) {
     if (suggestions.isEmpty()) return
@@ -88,6 +89,7 @@ fun SuggestedAppsRow(
                         ) {
                             AppIconImage(
                                 packageName = item.packageName,
+                                iconPackPackage = iconPackPackage,
                                 size = 38.dp
                             )
                         }

@@ -112,6 +112,40 @@ class ProfileRepositoryImpl @Inject constructor(
         profileDao.deleteById(profileId)
     }
 
+    override suspend fun checkAndApplySchedule(): Boolean {
+        ensureDefaultProfiles()
+        val allEntities = profileDao.getAllProfilesList()
+        val allProfiles = allEntities.map { it.toDomain() }
+        val scheduledProfiles = allProfiles.filter { it.isScheduleEnabled }
+        if (scheduledProfiles.isEmpty()) return false
+
+        val calendar = java.util.Calendar.getInstance()
+        val currentMinutes = calendar.get(java.util.Calendar.HOUR_OF_DAY) * 60 + calendar.get(java.util.Calendar.MINUTE)
+
+        val targetProfile = scheduledProfiles.firstOrNull { profile ->
+            val startMinutes = profile.startHour * 60 + profile.startMinute
+            val endMinutes = profile.endHour * 60 + profile.endMinute
+            if (startMinutes <= endMinutes) {
+                currentMinutes in startMinutes..endMinutes
+            } else {
+                currentMinutes >= startMinutes || currentMinutes <= endMinutes
+            }
+        }
+
+        val activeProfile = allProfiles.find { it.isActive }
+
+        if (targetProfile != null) {
+            if (activeProfile?.id != targetProfile.id) {
+                // If active profile is protected with a PIN, do not switch automatically
+                if (activeProfile?.pinCode.isNullOrBlank()) {
+                    switchProfile(targetProfile.id)
+                    return true
+                }
+            }
+        }
+        return false
+    }
+
     private fun ProfileEntity.toDomain(): Profile {
         val profileType = try {
             ProfileType.valueOf(type)
